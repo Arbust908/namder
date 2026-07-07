@@ -13,11 +13,17 @@ WORKDIR /app
 # --- PocketBase (PIN this version; hook API is version-sensitive) ---
 ARG PB_VERSION=0.22.21
 RUN apk add --no-cache unzip wget ca-certificates \
- && wget https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip \
- && unzip pocketbase_${PB_VERSION}_linux_amd64.zip -d /pb \
+ && case "$(uname -m)" in \
+      x86_64)  PB_ARCH=amd64 ;; \
+      aarch64) PB_ARCH=arm64 ;; \
+      *)       echo "Unsupported arch: $(uname -m)"; exit 1 ;; \
+    esac \
+ && PB_ZIP="pocketbase_${PB_VERSION}_linux_${PB_ARCH}.zip" \
+ && wget "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/${PB_ZIP}" \
+ && unzip "$PB_ZIP" -d /pb \
  && chmod +x /pb/pocketbase \
  && /pb/pocketbase --version \
- && rm pocketbase_${PB_VERSION}_linux_amd64.zip
+ && rm "$PB_ZIP"
 
 # --- Next standalone output ---
 # next.config.js must set: output: "standalone"
