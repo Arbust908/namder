@@ -11,7 +11,8 @@
 
 migrate(
   (app) => {
-    const users = app.findCollectionByNameOrId("users");
+    const dao = app.dao();
+    const users = dao.findCollectionByNameOrId("users");
 
     // --- add custom fields (guard against re-run) ---
     if (!users.fields.getByName("guest_uuid")) {
@@ -57,12 +58,13 @@ migrate(
     users.updateRule = "id = @request.auth.id";
     users.listRule = "id = @request.auth.id";
 
-    app.save(users);
+    dao.saveCollection(users);
   },
 
   (app) => {
     // down: remove the added fields + index + rules
-    const users = app.findCollectionByNameOrId("users");
+    const dao = app.dao();
+    const users = dao.findCollectionByNameOrId("users");
     users.indexes = (users.indexes || []).filter(
       (ix) => !ix.includes("idx_users_guest_uuid")
     );
@@ -71,6 +73,6 @@ migrate(
       if (field) users.fields.removeByName(f);
     });
     users.createRule = null;
-    app.save(users);
+    dao.saveCollection(users);
   }
 );
