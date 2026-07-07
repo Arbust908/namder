@@ -1,7 +1,7 @@
 // pb_migrations/1700000000_init.js
 // Auto-applies the Namder schema on PocketBase boot.
 // Schema is inlined here because goja's require() has spotty module.exports support.
-// If you edit schema.js, copy the changes here too.
+// If you edit schema.json, copy the changes here too.
 
 const collections = [
   {
