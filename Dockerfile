@@ -13,8 +13,10 @@ WORKDIR /app
 # --- PocketBase (PIN this version; hook API is version-sensitive) ---
 ARG PB_VERSION=0.22.21
 RUN apk add --no-cache unzip wget ca-certificates \
- && wget -q https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip \
+ && wget https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip \
  && unzip pocketbase_${PB_VERSION}_linux_amd64.zip -d /pb \
+ && chmod +x /pb/pocketbase \
+ && /pb/pocketbase --version \
  && rm pocketbase_${PB_VERSION}_linux_amd64.zip
 
 # --- Next standalone output ---
