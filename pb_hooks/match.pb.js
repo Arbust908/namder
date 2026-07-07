@@ -2,7 +2,7 @@
 // Recompute a (room, name) match row whenever a vote changes, or whenever
 // room membership changes (which shifts the threshold for a star).
 //
-// VERSION NOTE: the JSVM hook API (onRecordAfter*Success, $app.dao(), Record)
+// VERSION NOTE: the JSVM hook API (onRecordAfter*Request, $app.dao(), Record)
 // differs across PocketBase releases. This targets 0.22.x. Pin PB_VERSION in
 // the Dockerfile and verify against that release's jsvm reference.
 
@@ -43,22 +43,22 @@ function recomputeRoom(roomId) {
   });
 }
 
-onRecordAfterCreateSuccess((e) => {
+onRecordAfterCreateRequest((e) => {
   recomputeMatch(e.record.get("room"), e.record.get("name"));
   e.next();
 }, "votes");
 
-onRecordAfterUpdateSuccess((e) => {
+onRecordAfterUpdateRequest((e) => {
   recomputeMatch(e.record.get("room"), e.record.get("name"));
   e.next();
 }, "votes");
 
-onRecordAfterCreateSuccess((e) => {
+onRecordAfterCreateRequest((e) => {
   recomputeRoom(e.record.get("room"));
   e.next();
 }, "members");
 
-onRecordAfterDeleteSuccess((e) => {
+onRecordAfterDeleteRequest((e) => {
   recomputeRoom(e.record.get("room"));
   e.next();
 }, "members");

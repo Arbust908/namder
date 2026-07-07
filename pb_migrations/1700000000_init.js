@@ -23,7 +23,7 @@ migrate(
       listRule: "",
       viewRule: "",
     });
-    app.save(names);
+    app.dao().saveCollection(names);
 
     // ---- rooms ----
     const rooms = new Collection({
@@ -45,7 +45,7 @@ migrate(
       createRule: "@request.auth.id != ''",
       updateRule: "owner = @request.auth.id",
     });
-    app.save(rooms);
+    app.dao().saveCollection(rooms);
 
     // ---- members ----
     const members = new Collection({
@@ -69,7 +69,7 @@ migrate(
       updateRule: "user = @request.auth.id",
       deleteRule: "user = @request.auth.id",
     });
-    app.save(members);
+    app.dao().saveCollection(members);
 
     // ---- votes ----
     const votes = new Collection({
@@ -93,7 +93,7 @@ migrate(
       createRule: "@request.auth.id != '' && user = @request.auth.id",
       updateRule: "user = @request.auth.id",
     });
-    app.save(votes);
+    app.dao().saveCollection(votes);
 
     // ---- matches (hook-owned, read-only to clients) ----
     const matches = new Collection({
@@ -117,15 +117,15 @@ migrate(
       updateRule: null,
       deleteRule: null,
     });
-    app.save(matches);
+    app.dao().saveCollection(matches);
   },
 
   (app) => {
     // ---- down: drop in reverse dependency order ----
     for (const n of ["matches", "votes", "members", "rooms", "names"]) {
       try {
-        const c = app.findCollectionByNameOrId(n);
-        app.delete(c);
+        const c = app.dao().findCollectionByNameOrId(n);
+        app.dao().deleteCollection(c);
       } catch (_) {}
     }
   }
