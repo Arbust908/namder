@@ -9,19 +9,13 @@
 
 import React, { useEffect, useState } from "react";
 import { getBrowserPb } from "@/lib/pb";
+import { COLORS } from "@/lib/theme";
 
 type MemberRow = {
   id: string;
   display: string;
   done: boolean;
   user: string;
-};
-
-const COLORS = {
-  girl: "#FF6B9D",
-  boy: "#4ECDC4",
-  like: "#5BD6A5",
-  muted: "rgba(255,255,255,.55)",
 };
 
 export default function GroupView({

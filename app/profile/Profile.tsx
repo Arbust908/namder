@@ -10,11 +10,7 @@ import {
   logout,
 } from "@/lib/registeredAuth";
 import { getBrowserPb } from "@/lib/pb";
-
-const COLORS = {
-  girl: "#FF6B9D",
-  muted: "rgba(255,255,255,.55)",
-};
+import { COLORS } from "@/lib/theme";
 
 export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [state, setState] = useState<AuthState>({ kind: "anonymous" });

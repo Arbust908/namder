@@ -16,7 +16,7 @@
 // the user id never changes.
 
 import { getBrowserPb } from "@/lib/pb";
-import { ensureGuest, forgetGuest } from "@/lib/guestAuth";
+import { ensureGuest, persist, PB_AUTH_KEY } from "@/lib/guestAuth";
 
 type AuthResult = { userId: string; isNewAccount: boolean };
 
@@ -82,7 +82,7 @@ export function logout(): void {
   const pb = getBrowserPb();
   pb.authStore.clear();
   if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("namder.pb.auth");
+    localStorage.removeItem(PB_AUTH_KEY);
   }
 }
 
@@ -91,14 +91,3 @@ export function isGuestSession(): boolean {
   const pb = getBrowserPb();
   return Boolean(pb.authStore.record?.is_guest);
 }
-
-function persist(pb: ReturnType<typeof getBrowserPb>) {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(
-    "namder.pb.auth",
-    JSON.stringify({ token: pb.authStore.token, record: pb.authStore.record })
-  );
-}
-
-// Re-export so callers only need one module for "do I have identity yet".
-export { ensureGuest, forgetGuest };

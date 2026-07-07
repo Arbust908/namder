@@ -1,20 +1,12 @@
 // app/room/[code]/RoundResultsTable.tsx
 // Shown right after a person finishes their 20-name round. Two columns of
 // truth: what THEY picked, and what the GROUP currently agrees on. The star
-// column can keep updating live (via a passed-in useRoomMatches subscription)
+// column shows the group tally at fetch time; stars are live in GroupView.
 // since other members might still be swiping.
 
 import React, { useEffect, useState } from "react";
 import { getRoundResults, RoundRow } from "@/lib/roundResults";
-
-const COLORS = {
-  girl: "#FF6B9D",
-  boy: "#4ECDC4",
-  like: "#5BD6A5",
-  nope: "#FF5E7E",
-  star: "#FFD15C",
-  muted: "rgba(255,255,255,.55)",
-};
+import { COLORS } from "@/lib/theme";
 
 function genderColor(g: string) {
   return g === "girl" ? COLORS.girl : COLORS.boy;

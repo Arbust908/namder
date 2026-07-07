@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Landing from "./(marketing)/Landing";
 import { ensureGuest } from "@/lib/guestAuth";
+import { getBrowserPb } from "@/lib/pb";
 
 export default function Home() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function Home() {
       await ensureGuest();
 
       // Create a room via the API
-      const token = (await import("@/lib/pb")).getBrowserPb().authStore.token;
+      const token = getBrowserPb().authStore.token;
       const res = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

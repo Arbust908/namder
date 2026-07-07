@@ -5,11 +5,11 @@
 //
 // This deliberately does NOT wait for everyone else to finish — a person's
 // own picks are known the moment they're done, and `matches.is_star` will
-// keep updating live in the background (same realtime rows the results
-// screen already subscribes to via useRoomMatches). So this table can show
+// keep updating live in the background. So this table can show
 // "3/5 matched so far" and the star will flip on if a holdout later says yes.
 
 import { getBrowserPb } from "@/lib/pb";
+import type { NameRecord, VoteRecord } from "@/lib/types";
 
 export type RoundRow = {
   nameId: string;
@@ -41,25 +41,25 @@ export async function getRoundResults(
     sort: "-created",
     expand: "name",
   });
-  const roundVotes = myVotes.slice(0, roundSize);
+  const roundVotes = (myVotes as unknown as VoteRecord[]).slice(0, roundSize);
   if (roundVotes.length === 0) return [];
 
-  const nameIds = roundVotes.map((v: any) => v.name);
+  const nameIds = roundVotes.map((v) => v.name);
 
   // Current match tally for exactly these names in this room.
   const filter = `room = "${roomId}" && (${nameIds
-    .map((id: string) => `name = "${id}"`)
+    .map((id) => `name = "${id}"`)
     .join(" || ")})`;
   const matchRows = await pb.collection("matches").getFullList({ filter });
-  const matchByName = new Map(matchRows.map((m: any) => [m.name, m]));
+  const matchByName = new Map(matchRows.map((m) => [m.name, m]));
 
   const memberCount = await pb.collection("members").getFullList({
     filter: `room = "${roomId}"`,
   }).then((rows) => rows.length);
 
   return roundVotes
-    .map((v: any) => {
-      const n = v.expand?.name;
+    .map((v) => {
+      const n = (v as unknown as { expand?: { name?: NameRecord } }).expand?.name;
       if (!n) return null;
       const match = matchByName.get(v.name);
       return {

@@ -5,14 +5,9 @@
 
 import { getBrowserPb } from "@/lib/pb";
 import { ensureGuest } from "@/lib/guestAuth";
+import type { RoomRecord, MemberRecord } from "@/lib/types";
 
-export type Room = {
-  id: string;
-  code: string;
-  gender: "girl" | "boy" | "either";
-  status: "lobby" | "swiping" | "done";
-  owner: string;
-};
+export type Room = RoomRecord;
 
 /** Look up a room by its shareable code. */
 export async function findRoomByCode(code: string): Promise<Room | null> {
@@ -78,10 +73,10 @@ export async function myGroups(): Promise<
     expand: "room",
     sort: "-created",
   });
-  return rows.map((m: any) => ({
+  return rows.map((m) => ({
     memberId: m.id,
     done: m.done,
-    room: m.expand?.room as Room,
+    room: (m as unknown as MemberRecord & { expand?: { room?: RoomRecord } }).expand?.room as Room,
   }));
 }
 

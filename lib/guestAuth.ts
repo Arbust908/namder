@@ -15,6 +15,7 @@ import { getBrowserPb } from "@/lib/pb";
 
 const TOKEN_KEY = "namder.pb.auth";   // persisted PB auth payload
 const UUID_KEY = "namder.guest.uuid"; // durable device id
+export const PB_AUTH_KEY = TOKEN_KEY;
 
 // crypto.randomUUID is available in all modern browsers + node 19+.
 function newUuid(): string {
@@ -109,7 +110,7 @@ export async function ensureGuest(opts?: {
   return { userId: pb.authStore.record!.id, uuid };
 }
 
-function persist(pb: ReturnType<typeof getBrowserPb>) {
+export function persist(pb: ReturnType<typeof getBrowserPb>) {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(
     TOKEN_KEY,

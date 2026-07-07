@@ -3,13 +3,7 @@
 // [EDITAR: ...] markers and replace with the real copy before shipping.
 
 import React, { useState } from "react";
-
-const COLORS = {
-  bg: "#2A1B3D",
-  girl: "#FF6B9D",
-  boy: "#4ECDC4",
-  muted: "rgba(255,255,255,.6)",
-};
+import { COLORS } from "@/lib/theme";
 
 const FAQS: Array<{ q: string; a: string }> = [
   {

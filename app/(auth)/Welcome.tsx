@@ -12,12 +12,7 @@
 import React, { useState } from "react";
 import { ensureGuest } from "@/lib/guestAuth";
 import { registerNew } from "@/lib/registeredAuth";
-
-const COLORS = {
-  girl: "#FF6B9D",
-  ink: "#1A1023",
-  muted: "rgba(255,255,255,.6)",
-};
+import { COLORS } from "@/lib/theme";
 
 type Props = {
   onReady: () => void; // called once a session (guest or registered) exists

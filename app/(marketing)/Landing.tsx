@@ -8,19 +8,8 @@
 // shapes. They're illustrative facsimiles, not live screenshots, but they're
 // honest about what the product looks like rather than generic stock art.
 
-import React from "react";
-
-const COLORS = {
-  bg: "#2A1B3D",
-  card: "#FFF8F0",
-  ink: "#1A1023",
-  girl: "#FF6B9D",
-  boy: "#4ECDC4",
-  like: "#5BD6A5",
-  nope: "#FF5E7E",
-  star: "#FFD15C",
-  muted: "rgba(255,255,255,.6)",
-};
+import React, { useMemo } from "react";
+import { COLORS } from "@/lib/theme";
 
 export default function Landing({
   onStart,
@@ -179,16 +168,19 @@ function ResultsMock() {
 }
 
 function GroupMock() {
+  const qrCells = useMemo(
+    () =>
+      Array.from({ length: 25 }).map(() => Math.random() > 0.5),
+    []
+  );
   return (
     <div style={styles.mockInner}>
       <div style={styles.mockQrBox}>
         <div style={styles.mockQrGrid}>
-          {Array.from({ length: 25 }).map((_, i) => (
+          {qrCells.map((on, i) => (
             <span
               key={i}
-              style={{
-                background: Math.random() > 0.5 ? "#1A1023" : "transparent",
-              }}
+              style={{ background: on ? "#1A1023" : "transparent" }}
             />
           ))}
         </div>

@@ -35,9 +35,16 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json({ id: room.id, code: room.code });
     } catch (e: any) {
-      // unique-constraint violation -> try a new code; anything else -> bail
-      if (e?.status !== 400) {
-        return NextResponse.json({ error: "create failed" }, { status: 500 });
+      // Only retry on unique-constraint violations (code collisions).
+      // Any other 400 (validation, bad field) or non-400 error bails immediately.
+      const isUniqueViolation =
+        e?.status === 400 &&
+        e?.data?.code?.code?.includes("unique");
+      if (!isUniqueViolation) {
+        return NextResponse.json(
+          { error: "create failed" },
+          { status: e?.status === 400 ? 400 : 500 }
+        );
       }
     }
   }
