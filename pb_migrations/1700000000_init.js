@@ -99,10 +99,10 @@ const collections = [
 
 migrate(
   (app) => {
-    // PocketBase v0.22+: use app.save() per collection instead of importCollections
+    const dao = app.dao();
     for (const plain of collections) {
       const collection = new Collection(plain);
-      app.save(collection);
+      dao.saveCollection(collection);
     }
   },
   (app) => {
