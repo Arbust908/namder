@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   try {
     const { uuid, displayName } = await req.json();
     if (!uuid || typeof uuid !== "string") {
-      return NextResponse.json({ error: "uuid required" }, { status: 400 });
+      return NextResponse.json({ error: "Se requiere un uuid." }, { status: 400 });
     }
 
     const existing = await db
@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) {
     if (e?.code === "23505") {
-      return NextResponse.json({ error: "conflict, retry" }, { status: 409 });
+      return NextResponse.json({ error: "Conflicto, reintentá." }, { status: 409 });
     }
-    return NextResponse.json({ error: "auth failed" }, { status: 500 });
+    return NextResponse.json({ error: "No pudimos crear la sesión." }, { status: 500 });
   }
 }

@@ -4,9 +4,18 @@
 // Browser code reads the token from localStorage and sends it as a Bearer header.
 
 import { SignJWT, jwtVerify } from "jose";
+import { NextRequest, NextResponse } from "next/server";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET env var is required in production");
+  }
+  console.warn("JWT_SECRET not set — using dev default (insecure outside localhost)");
+}
 
 const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "namder-dev-secret-change-in-production"
+  JWT_SECRET || "namder-dev-secret-change-in-production"
 );
 
 const ISSUER = "namder";
@@ -40,3 +49,19 @@ export async function verifyToken(
     return null;
   }
 }
+
+// ── auth middleware helper ───────────────────────────────────────────
+// Every authenticated route called this same 6-line incantation.
+// Now it's one call + one guard.
+
+export async function getAuthPayload(
+  req: NextRequest
+): Promise<TokenPayload | null> {
+  const header = req.headers.get("authorization");
+  const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return null;
+  return verifyToken(token);
+}
+
+export const UNAUTHORIZED = () =>
+  NextResponse.json({ error: "No autorizado." }, { status: 401 });

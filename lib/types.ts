@@ -35,10 +35,3 @@ export interface VoteRecord {
   liked: boolean;
 }
 
-export type DeckName = {
-  id: string;
-  name: string;
-  gender: string;
-  origin: string;
-  meaning: string;
-};

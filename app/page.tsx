@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Landing from "./(marketing)/Landing";
 import { ensureGuest } from "@/lib/guestAuth";
+import { apiCreateRoom } from "@/lib/api-client";
 
 export default function Home() {
   const router = useRouter();
@@ -15,14 +16,9 @@ export default function Home() {
     try {
       await ensureGuest();
 
-      const res = await fetch("/api/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gender: "either" }),
-      });
-      const { code } = await res.json();
-      if (code) {
-        router.push(`/room/${code}`);
+      const room = await apiCreateRoom({ gender: "either" });
+      if (room.code) {
+        router.push(`/room/${room.code}`);
       }
     } finally {
       setBusy(false);

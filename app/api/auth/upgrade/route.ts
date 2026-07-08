@@ -5,26 +5,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/schema";
-import { signToken, verifyToken } from "@/lib/auth";
+import { signToken, getAuthPayload, UNAUTHORIZED } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
 import { eq } from "drizzle-orm";
 
 export async function PATCH(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const payload = await getAuthPayload(req);
+  if (!payload) return UNAUTHORIZED();
 
-  const payload = await verifyToken(token);
-  if (!payload || !payload.isGuest) {
-    return NextResponse.json({ error: "not a guest session" }, { status: 403 });
+  if (!payload.isGuest) {
+    return NextResponse.json(
+      { error: "Esta sesión ya es una cuenta registrada." },
+      { status: 403 }
+    );
   }
 
   try {
     const { email, password } = await req.json();
     if (!email || !password || password.length < 8) {
-      return NextResponse.json({ error: "invalid input" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Email válido y contraseña de al menos 8 caracteres." },
+        { status: 400 }
+      );
     }
 
     const passwordHash = await hashPassword(password);
@@ -42,7 +44,10 @@ export async function PATCH(req: NextRequest) {
       .returning();
 
     if (!updated) {
-      return NextResponse.json({ error: "user not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Usuario no encontrado." },
+        { status: 404 }
+      );
     }
 
     const newToken = await signToken({
@@ -63,8 +68,14 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (e: any) {
     if (e?.code === "23505") {
-      return NextResponse.json({ error: "Ese email ya está en uso." }, { status: 409 });
+      return NextResponse.json(
+        { error: "Ese email ya está en uso." },
+        { status: 409 }
+      );
     }
-    return NextResponse.json({ error: "upgrade failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "No pudimos crear la cuenta." },
+      { status: 500 }
+    );
   }
 }

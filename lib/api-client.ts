@@ -201,7 +201,7 @@ export async function apiListMyVotes(
 export type NameData = {
   id: string;
   name: string;
-  gender: string;
+  gender: "girl" | "boy";
   origin: string;
   meaning: string;
 };

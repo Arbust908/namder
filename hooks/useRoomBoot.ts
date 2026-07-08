@@ -5,14 +5,13 @@ import { useEffect, useState } from "react";
 import { ensureGuest } from "@/lib/guestAuth";
 import { joinGroup, findRoomByCode } from "@/lib/groups";
 import { loadDeck } from "@/lib/vote";
-import { getProfile } from "@/lib/api-client";
-import type { DeckName } from "@/lib/types";
+import { getProfile, type NameData } from "@/lib/api-client";
 
 interface BootState {
   roomId: string | null;
   memberId: string | null;
   roomCode: string;
-  deck: DeckName[];
+  deck: NameData[];
   displayName: string;
   error: string | null;
   loading: boolean;
@@ -22,7 +21,7 @@ export function useRoomBoot(code: string): BootState {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [memberId, setMemberId] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState(code);
-  const [deck, setDeck] = useState<DeckName[]>([]);
+  const [deck, setDeck] = useState<NameData[]>([]);
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

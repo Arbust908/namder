@@ -12,7 +12,10 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
     if (!email || !password) {
-      return NextResponse.json({ error: "email and password required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Email y contraseña son requeridos." },
+        { status: 400 }
+      );
     }
 
     const rows = await db
@@ -22,12 +25,18 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (rows.length === 0 || !rows[0].passwordHash) {
-      return NextResponse.json({ error: "Credenciales inválidas." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Credenciales inválidas." },
+        { status: 401 }
+      );
     }
 
     const valid = await verifyPassword(password, rows[0].passwordHash);
     if (!valid) {
-      return NextResponse.json({ error: "Credenciales inválidas." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Credenciales inválidas." },
+        { status: 401 }
+      );
     }
 
     const user = rows[0];
@@ -48,6 +57,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch {
-    return NextResponse.json({ error: "login failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "No pudimos iniciar sesión." },
+      { status: 500 }
+    );
   }
 }

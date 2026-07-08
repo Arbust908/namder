@@ -4,8 +4,8 @@
 // The drag interaction, card rendering, and deck display are self-contained here.
 
 import React, { useState, useRef } from "react";
-import { COLORS } from "@/lib/theme";
-import type { DeckName } from "@/lib/types";
+import { COLORS, genderColor } from "@/lib/theme";
+import type { NameData } from "@/lib/api-client";
 
 /* ============================ SwipeDeck ============================ */
 
@@ -14,7 +14,7 @@ export function SwipeDeck({
   index,
   onVote,
 }: {
-  deck: DeckName[];
+  deck: NameData[];
   index: number;
   onVote: (liked: boolean) => void;
 }) {
@@ -69,13 +69,9 @@ export function SwipeDeck({
 
 /* ============================ Helpers ============================ */
 
-export function genderColor(g: string) {
-  return g === "girl" ? COLORS.girl : g === "boy" ? COLORS.boy : COLORS.either;
-}
-
 /* ============================ NameCard ============================ */
 
-function NameCard({ card, stacked }: { card: DeckName; stacked?: boolean }) {
+function NameCard({ card, stacked }: { card: NameData; stacked?: boolean }) {
   return (
     <div style={{ ...styles.swipeCard, ...(stacked ? styles.stacked : {}) }}>
       <NameCardInner card={card} />
@@ -83,7 +79,7 @@ function NameCard({ card, stacked }: { card: DeckName; stacked?: boolean }) {
   );
 }
 
-function NameCardInner({ card }: { card: DeckName }) {
+function NameCardInner({ card }: { card: NameData }) {
   const c = genderColor(card.gender);
   return (
     <>
@@ -104,7 +100,7 @@ function SwipeCard({
   card,
   onVote,
 }: {
-  card: DeckName;
+  card: NameData;
   onVote: (liked: boolean) => void;
 }) {
   const [drag, setDrag] = useState({ x: 0, y: 0, active: false });

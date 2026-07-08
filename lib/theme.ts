@@ -23,3 +23,8 @@ export const kickerText: React.CSSProperties = {
   color: COLORS.girl,
   marginBottom: 4,
 };
+
+/** Canonical gender → color mapping. One source of truth. */
+export function genderColor(g: string): string {
+  return g === "girl" ? COLORS.girl : g === "boy" ? COLORS.boy : COLORS.either;
+}

@@ -3,7 +3,7 @@
 // Browser code uses lib/api-client.ts (fetch wrapper) instead.
 
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "@/node_modules/@types/pg";
+import { Pool } from "pg";
 import * as schema from "./schema";
 
 const DATABASE_URL = process.env.DATABASE_URL!;

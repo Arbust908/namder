@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { rooms } from "@/lib/schema";
-import { verifyToken } from "@/lib/auth";
+import { getAuthPayload } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -21,7 +21,7 @@ function makeCode(len = 6) {
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   if (!code) {
-    return NextResponse.json({ error: "code required" }, { status: 400 });
+    return NextResponse.json({ error: "Se requiere un código." }, { status: 400 });
   }
 
   const rows = await db
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     .limit(1);
 
   if (rows.length === 0) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
+    return NextResponse.json({ error: "Sala no encontrada." }, { status: 404 });
   }
 
   const r = rows[0];
@@ -46,13 +46,11 @@ export async function GET(req: NextRequest) {
 
 // POST /api/rooms
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const payload = token ? await verifyToken(token) : null;
+  const payload = await getAuthPayload(req);
 
   const { gender } = await req.json();
   if (!["girl", "boy", "either"].includes(gender)) {
-    return NextResponse.json({ error: "bad gender" }, { status: 400 });
+    return NextResponse.json({ error: "Género inválido." }, { status: 400 });
   }
 
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -78,10 +76,16 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       // Retry on unique violation (code collision).
       if (e?.code !== "23505") {
-        return NextResponse.json({ error: "create failed" }, { status: 500 });
+        return NextResponse.json(
+          { error: "No pudimos crear la sala." },
+          { status: 500 }
+        );
       }
     }
   }
 
-  return NextResponse.json({ error: "no free code" }, { status: 503 });
+  return NextResponse.json(
+    { error: "No hay códigos disponibles. Reintentá." },
+    { status: 503 }
+  );
 }

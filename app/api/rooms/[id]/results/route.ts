@@ -5,23 +5,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { votes, members, names } from "@/lib/schema";
-import { verifyToken } from "@/lib/auth";
+import { getAuthPayload, UNAUTHORIZED } from "@/lib/auth";
 import { eq, and, sql } from "drizzle-orm";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
-  const payload = await verifyToken(token);
-  if (!payload) {
-    return NextResponse.json({ error: "invalid token" }, { status: 401 });
-  }
+  const payload = await getAuthPayload(req);
+  if (!payload) return UNAUTHORIZED();
 
   const roomId = params.id;
   const roundSize = parseInt(req.nextUrl.searchParams.get("roundSize") || "20");

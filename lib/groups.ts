@@ -42,15 +42,6 @@ export async function leaveGroup(memberId: string): Promise<void> {
   await apiLeaveRoom(memberId);
 }
 
-/** Every group this guest currently belongs to. */
-export async function myGroups(): Promise<
-  Array<{ memberId: string; room: Room; done: boolean }>
-> {
-  // This is a simplified version — for now we don't have a "my groups" API.
-  // The feature wasn't wired up yet anyway.
-  return [];
-}
-
 /** Mark this guest as finished swiping in a group. */
 export async function markDone(memberId: string): Promise<void> {
   await apiUpdateMember(memberId, { done: true });

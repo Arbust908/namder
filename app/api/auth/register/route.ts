@@ -11,10 +11,16 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password, display } = await req.json();
     if (!email || !password) {
-      return NextResponse.json({ error: "email and password required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Email y contraseña son requeridos." },
+        { status: 400 }
+      );
     }
     if (password.length < 8) {
-      return NextResponse.json({ error: "password too short" }, { status: 400 });
+      return NextResponse.json(
+        { error: "La contraseña debe tener al menos 8 caracteres." },
+        { status: 400 }
+      );
     }
 
     const passwordHash = await hashPassword(password);
@@ -47,8 +53,14 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) {
     if (e?.code === "23505") {
-      return NextResponse.json({ error: "Ese email ya está registrado." }, { status: 409 });
+      return NextResponse.json(
+        { error: "Ese email ya está registrado." },
+        { status: 409 }
+      );
     }
-    return NextResponse.json({ error: "registration failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "No pudimos crear la cuenta." },
+      { status: 500 }
+    );
   }
 }

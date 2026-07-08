@@ -2,18 +2,13 @@
 // Cast (or change) a vote. Upserts so re-swiping a name overwrites the old
 // choice. The "matches" (star) computation is done server-side via SQL.
 
-import { apiCastVote, apiListNames, apiListMyVotes } from "@/lib/api-client";
-import { getProfile } from "@/lib/api-client";
-import type { DeckName } from "@/lib/types";
+import { apiCastVote, apiListNames, apiListMyVotes, type NameData } from "@/lib/api-client";
 
 export async function castVote(opts: {
   roomId: string;
   nameId: string;
   liked: boolean;
 }) {
-  const profile = getProfile();
-  if (!profile) throw new Error("not authenticated");
-
   return apiCastVote({
     roomId: opts.roomId,
     nameId: opts.nameId,
@@ -26,7 +21,7 @@ export async function castVote(opts: {
 export async function loadDeck(
   roomId: string,
   gender: "girl" | "boy" | "either"
-): Promise<DeckName[]> {
+): Promise<NameData[]> {
   const names = await apiListNames(gender === "either" ? undefined : gender);
   const myVotes = await apiListMyVotes(roomId);
   const votedIds = new Set(myVotes.map((v) => v.nameId));

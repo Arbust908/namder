@@ -5,12 +5,8 @@
 // since other members might still be swiping.
 
 import React, { useEffect, useState } from "react";
-import { getRoundResults, RoundRow } from "@/lib/roundResults";
-import { COLORS } from "@/lib/theme";
-
-function genderColor(g: string) {
-  return g === "girl" ? COLORS.girl : COLORS.boy;
-}
+import { apiGetRoundResults, type RoundRowData } from "@/lib/api-client";
+import { COLORS, genderColor, kickerText } from "@/lib/theme";
 
 export default function RoundResultsTable({
   roomId,
@@ -21,10 +17,10 @@ export default function RoundResultsTable({
   roundSize?: number;
   onContinue: () => void;
 }) {
-  const [rows, setRows] = useState<RoundRow[] | null>(null);
+  const [rows, setRows] = useState<RoundRowData[] | null>(null);
 
   useEffect(() => {
-    getRoundResults(roomId, roundSize).then(setRows);
+    apiGetRoundResults(roomId, roundSize).then(setRows);
   }, [roomId, roundSize]);
 
   if (!rows) {
@@ -36,7 +32,7 @@ export default function RoundResultsTable({
 
   return (
     <div style={styles.wrap}>
-      <p style={styles.kicker}>Ronda completa</p>
+      <p style={{ ...kickerText, margin: "8px 0 6px" }}>Ronda completa</p>
       <h2 style={styles.h2}>
         Te gustaron {likedCount} de {rows.length}
         {starCount > 0 && <> · {starCount} ⭐</>}
@@ -83,10 +79,6 @@ export default function RoundResultsTable({
 const styles: Record<string, React.CSSProperties> = {
   wrap: { width: "100%", maxWidth: 480, margin: "0 auto", padding: "8px 24px 36px" },
   loading: { color: COLORS.muted, fontFamily: "system-ui, sans-serif", textAlign: "center", marginTop: 40 },
-  kicker: {
-    fontFamily: "system-ui, sans-serif", textTransform: "uppercase",
-    letterSpacing: "2px", fontSize: 12, color: COLORS.girl, margin: "8px 0 6px",
-  },
   h2: { fontFamily: "Georgia, serif", fontSize: 26, color: "#fff", margin: "4px 0 20px" },
   table: {
     background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.1)",

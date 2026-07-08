@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { castVote } from "@/lib/vote";
 import { markDone } from "@/lib/groups";
@@ -25,13 +25,11 @@ export default function RoomPage() {
     useRoomBoot(code);
 
   // Transition from loading → swiping once boot completes.
-  if (loading && !error && screen === "loading") {
-    // Still booting — render loading below
-  } else if (!loading && screen === "loading") {
-    // Bootstrap finished — switch to swiping.
-    // Using a microtask avoids setState-during-render.
-    queueMicrotask(() => setScreen("swiping"));
-  }
+  useEffect(() => {
+    if (!loading && !error && screen === "loading") {
+      setScreen("swiping");
+    }
+  }, [loading, error, screen]);
 
   const vote = useCallback(
     async (liked: boolean) => {
