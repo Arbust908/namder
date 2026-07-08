@@ -98,19 +98,17 @@ const collections = [
 ];
 
 migrate(
-  (app) => {
-    const dao = app.dao();
-    for (const plain of collections) {
-      const collection = new Collection(plain);
-      dao.saveCollection(collection);
-    }
+  () => {
+    // $app is the PocketBase global — the callback "app" param (txApp)
+    // doesn't expose dao() or save() in PB 0.22.x, so use the global.
+    $app.importCollections(collections);
   },
-  (app) => {
-    // Down: drop in reverse dependency order.
+  () => {
+    const dao = $app.dao();
     for (const name of ["matches", "votes", "members", "rooms", "names"]) {
       try {
-        const c = app.findCollectionByNameOrId(name);
-        app.delete(c);
+        const c = dao.findCollectionByNameOrId(name);
+        dao.deleteCollection(c);
       } catch (_) {}
     }
   }
