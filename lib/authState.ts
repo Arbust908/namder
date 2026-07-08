@@ -1,39 +1,33 @@
 // lib/authState.ts
 // One place the UI can ask "what am I looking at right now" — a guest, a
-// registered user, or nobody yet. Keeps the two auth flows (guestAuth.ts,
-// registeredAuth.ts) decoupled from how the UI decides what to show.
+// registered user, or nobody yet.
 
-import { getBrowserPb } from "@/lib/pb";
+import { getToken, getProfile } from "@/lib/api-client";
 
 export type AuthState =
-  | { kind: "anonymous" }                                   // no session at all yet
-  | { kind: "guest"; userId: string; display: string }       // UUID-backed guest
+  | { kind: "anonymous" }
+  | { kind: "guest"; userId: string; display: string }
   | { kind: "registered"; userId: string; email: string; display: string };
 
 export function getAuthState(): AuthState {
-  const pb = getBrowserPb();
-  const record = pb.authStore.record;
+  const token = getToken();
+  const profile = getProfile();
 
-  if (!record || !pb.authStore.isValid) return { kind: "anonymous" };
+  if (!token || !profile) return { kind: "anonymous" };
 
-  if (record.is_guest) {
-    return { kind: "guest", userId: record.id, display: record.display || "Guest" };
+  if (profile.isGuest) {
+    return { kind: "guest", userId: profile.id, display: profile.display || "Guest" };
   }
 
   return {
     kind: "registered",
-    userId: record.id,
-    email: record.email,
-    display: record.display || record.email,
+    userId: profile.id,
+    email: profile.email || "",
+    display: profile.display || profile.email || "",
   };
 }
 
-/**
- * Convenience for gating UI: should we show a "Save your progress / create an
- * account" nudge? True only for guests who have actually done something
- * (caller passes whether they've joined a group / cast votes) — no point
- * nagging someone who just opened the app.
- */
+/** Should we show a "Save your progress" nudge? */
 export function shouldOfferUpgrade(hasActivity: boolean): boolean {
   const state = getAuthState();
   return state.kind === "guest" && hasActivity;

@@ -2,21 +2,19 @@
 // The "I want an account" flow — sits next to lib/guestAuth.ts.
 //
 // Three entry points:
-//   1. registerNew(email, password, display)   — brand-new registered user
-//   2. login(email, password)                  — existing registered user
-//   3. upgradeGuestToRegistered(email, password) — turn *this device's*
-//      current guest into a real account, same record id, so all of its
-//      votes/memberships carry over untouched.
-//
-// PocketBase has no special "anonymous auth" primitive — this is the
-// documented pattern (confirmed against PocketBase's own discussion of the
-// topic): create the guest with a random password behind the scenes, and on
-// "register", update() that same record with the email + password the person
-// actually chose. Nothing about votes/members/matches needs to change because
-// the user id never changes.
+//   1. registerNew(email, password, display)  — brand-new registered user
+//   2. login(email, password)                 — existing registered user
+//   3. upgradeGuestToRegistered(email, password) — turn the current guest
+//      into a real account, same user id, so all votes/memberships carry over.
 
-import { getBrowserPb } from "@/lib/pb";
-import { ensureGuest, persist, PB_AUTH_KEY } from "@/lib/guestAuth";
+import {
+  getProfile,
+  saveToken,
+  clearSession,
+  apiRegister,
+  apiLogin,
+  apiUpgradeGuest,
+} from "@/lib/api-client";
 
 type AuthResult = { userId: string; isNewAccount: boolean };
 
@@ -26,68 +24,53 @@ export async function registerNew(
   password: string,
   display?: string
 ): Promise<AuthResult> {
-  const pb = getBrowserPb();
-  await pb.collection("users").create({
-    email,
+  const { token, profile } = await apiRegister({
+    email: email.trim(),
     password,
-    passwordConfirm: password,
-    display: display?.trim() || email.split("@")[0],
-    is_guest: false,
+    display: display?.trim(),
   });
-  await pb.collection("users").authWithPassword(email, password);
-  persist(pb);
-  return { userId: pb.authStore.record!.id, isNewAccount: true };
+  saveToken(token, profile);
+  return { userId: profile.id, isNewAccount: true };
 }
 
 /** Existing registered user signing back in (any device). */
-export async function login(email: string, password: string): Promise<AuthResult> {
-  const pb = getBrowserPb();
-  await pb.collection("users").authWithPassword(email, password);
-  persist(pb);
-  return { userId: pb.authStore.record!.id, isNewAccount: false };
+export async function login(
+  email: string,
+  password: string
+): Promise<AuthResult> {
+  const { token, profile } = await apiLogin({
+    email: email.trim(),
+    password,
+  });
+  saveToken(token, profile);
+  return { userId: profile.id, isNewAccount: false };
 }
 
 /**
  * Turn the CURRENT device's guest session into a real account.
- * Same record id -> existing votes/memberships/matches are untouched.
- * Call this from a "Save your progress / create an account" prompt.
+ * Same record id → existing votes/memberships are untouched.
  */
 export async function upgradeGuestToRegistered(
   email: string,
   password: string
 ): Promise<AuthResult> {
-  const pb = getBrowserPb();
+  const profile = getProfile();
+  if (!profile) throw new Error("no session");
 
-  // Make sure we actually have a guest session to upgrade.
-  const { userId } = await ensureGuest();
-
-  await pb.collection("users").update(userId, {
-    email,
+  const { token, profile: newProfile } = await apiUpgradeGuest({
+    email: email.trim(),
     password,
-    passwordConfirm: password,
-    is_guest: false,
-    emailVisibility: true,
   });
-
-  // Password/email changes invalidate old tokens — re-authenticate.
-  await pb.collection("users").authWithPassword(email, password);
-  persist(pb);
-  return { userId, isNewAccount: false };
+  saveToken(token, newProfile);
+  return { userId: newProfile.id, isNewAccount: false };
 }
 
-/** Sign out. For a registered user this is a real logout (no data loss —
- *  they can log back in from any device). For a guest, prefer forgetGuest()
- *  instead, since clearing the session there also drops the local secret. */
+/** Sign out. */
 export function logout(): void {
-  const pb = getBrowserPb();
-  pb.authStore.clear();
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem(PB_AUTH_KEY);
-  }
+  clearSession();
 }
 
-/** True if the currently authenticated record is still a guest. */
+/** True if the currently authenticated user is still a guest. */
 export function isGuestSession(): boolean {
-  const pb = getBrowserPb();
-  return Boolean(pb.authStore.record?.is_guest);
+  return getProfile()?.isGuest ?? false;
 }

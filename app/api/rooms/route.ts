@@ -1,11 +1,15 @@
 // app/api/rooms/route.ts
-// POST -> create a room, return its join code.
-// Thin BFF: generates a collision-checked code server-side so two phones
-// can't grab the same one.
-import { NextRequest, NextResponse } from "next/server";
-import { getServerPb } from "@/lib/pb";
+// GET  — find a room by code (?code=XXXXXX)
+// POST — create a new room and return its join code.
 
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1 ambiguity
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { rooms } from "@/lib/schema";
+import { verifyToken } from "@/lib/auth";
+import { eq } from "drizzle-orm";
+
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
 function makeCode(len = 6) {
   let s = "";
   for (let i = 0; i < len; i++)
@@ -13,40 +17,71 @@ function makeCode(len = 6) {
   return s;
 }
 
+// GET /api/rooms?code=XXXXXX
+export async function GET(req: NextRequest) {
+  const code = req.nextUrl.searchParams.get("code");
+  if (!code) {
+    return NextResponse.json({ error: "code required" }, { status: 400 });
+  }
+
+  const rows = await db
+    .select()
+    .from(rooms)
+    .where(eq(rooms.code, code.toUpperCase()))
+    .limit(1);
+
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+
+  const r = rows[0];
+  return NextResponse.json({
+    id: r.id,
+    code: r.code,
+    gender: r.gender,
+    status: r.status,
+    ownerId: r.ownerId,
+  });
+}
+
+// POST /api/rooms
 export async function POST(req: NextRequest) {
-  const { gender, ownerToken } = await req.json();
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const payload = token ? await verifyToken(token) : null;
+
+  const { gender } = await req.json();
   if (!["girl", "boy", "either"].includes(gender)) {
     return NextResponse.json({ error: "bad gender" }, { status: 400 });
   }
 
-  const pb = getServerPb();
-  // The caller passes its auth token so the room is owned by that user.
-  if (ownerToken) pb.authStore.save(ownerToken, null);
-
-  // Retry until we land a free code (collisions are rare at 6 chars).
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = makeCode();
     try {
-      const room = await pb.collection("rooms").create({
-        code,
-        gender,
-        status: "lobby",
-        owner: pb.authStore.record?.id,
+      const [room] = await db
+        .insert(rooms)
+        .values({
+          code,
+          gender,
+          status: "lobby",
+          ownerId: payload?.sub ?? null,
+        })
+        .returning();
+
+      return NextResponse.json({
+        id: room.id,
+        code: room.code,
+        gender: room.gender,
+        status: room.status,
+        ownerId: room.ownerId,
       });
-      return NextResponse.json({ id: room.id, code: room.code });
     } catch (e: any) {
-      // Only retry on unique-constraint violations (code collisions).
-      // Any other 400 (validation, bad field) or non-400 error bails immediately.
-      const isUniqueViolation =
-        e?.status === 400 &&
-        e?.data?.code?.code?.includes("unique");
-      if (!isUniqueViolation) {
-        return NextResponse.json(
-          { error: "create failed" },
-          { status: e?.status === 400 ? 400 : 500 }
-        );
+      // Retry on unique violation (code collision).
+      if (e?.code !== "23505") {
+        return NextResponse.json({ error: "create failed" }, { status: 500 });
       }
     }
   }
+
   return NextResponse.json({ error: "no free code" }, { status: 503 });
 }

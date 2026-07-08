@@ -1,12 +1,11 @@
 // hooks/useRoomBoot.ts
 // Boot sequence for the room page: ensure identity → join room → load deck.
-// Extracted from room/[code]/page.tsx to keep the page component lean.
 
 import { useEffect, useState } from "react";
 import { ensureGuest } from "@/lib/guestAuth";
 import { joinGroup, findRoomByCode } from "@/lib/groups";
 import { loadDeck } from "@/lib/vote";
-import { getBrowserPb } from "@/lib/pb";
+import { getProfile } from "@/lib/api-client";
 import type { DeckName } from "@/lib/types";
 
 interface BootState {
@@ -36,7 +35,11 @@ export function useRoomBoot(code: string): BootState {
         if (cancelled) return;
 
         const room = await findRoomByCode(code);
-        if (!room) { setError("Sala no encontrada."); setLoading(false); return; }
+        if (!room) {
+          setError("Sala no encontrada.");
+          setLoading(false);
+          return;
+        }
         if (cancelled) return;
 
         const { memberId: mid } = await joinGroup(code);
@@ -46,8 +49,8 @@ export function useRoomBoot(code: string): BootState {
         setRoomCode(room.code);
         setMemberId(mid);
 
-        const pb = getBrowserPb();
-        setDisplayName(pb.authStore.record?.display || "Guest");
+        const profile = getProfile();
+        setDisplayName(profile?.display || "Guest");
 
         const names = await loadDeck(room.id, room.gender);
         if (cancelled) return;
@@ -62,12 +65,15 @@ export function useRoomBoot(code: string): BootState {
         );
         setLoading(false);
       } catch {
-        if (!cancelled) setError("No pudimos cargar la sala. Probá de nuevo.");
+        if (!cancelled)
+          setError("No pudimos cargar la sala. Probá de nuevo.");
         setLoading(false);
       }
     }
     if (code) boot();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [code]);
 
   return { roomId, memberId, roomCode, deck, displayName, error, loading };

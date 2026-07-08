@@ -1,22 +1,10 @@
 // app/room/[code]/GroupView.tsx
 // "Mi grupo" — who's in, who's done swiping, and a QR to invite more people.
-//
-// QR generation: rather than pull in a client-side QR library (extra bundle
-// weight for one image), this renders the code via a public QR image
-// endpoint (api.qrserver.com — free, no key). If that's ever unavailable
-// (offline demo, restricted network), it falls back to the plain code +
-// "copy link" so joining still works without the image.
+// Previously used PocketBase SSE realtime; now polls every 3 seconds.
 
-import React, { useEffect, useState } from "react";
-import { getBrowserPb } from "@/lib/pb";
+import React, { useEffect, useState, useCallback } from "react";
+import { apiListMembers, type MemberData } from "@/lib/api-client";
 import { COLORS } from "@/lib/theme";
-
-type MemberRow = {
-  id: string;
-  display: string;
-  done: boolean;
-  user: string;
-};
 
 export default function GroupView({
   roomId,
@@ -27,7 +15,7 @@ export default function GroupView({
   roomCode: string;
   joinUrlBase: string;
 }) {
-  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [members, setMembers] = useState<MemberData[]>([]);
   const [copied, setCopied] = useState(false);
   const [qrFailed, setQrFailed] = useState(false);
 
@@ -36,27 +24,21 @@ export default function GroupView({
     joinUrl
   )}`;
 
-  const load = async () => {
-    const pb = getBrowserPb();
-    const rows = await pb.collection("members").getFullList<MemberRow>({
-      filter: `room = "${roomId}"`,
-      sort: "created",
-    });
-    setMembers(rows);
-  };
+  const load = useCallback(async () => {
+    try {
+      const rows = await apiListMembers(roomId);
+      setMembers(rows);
+    } catch {
+      // keep stale data on error
+    }
+  }, [roomId]);
 
   useEffect(() => {
     load();
-    const pb = getBrowserPb();
-    const unsub = pb.collection("members").subscribe(
-      "*",
-      () => load(),
-      { filter: `room = "${roomId}"` }
-    );
-    return () => {
-      unsub.then((fn) => fn());
-    };
-  }, [roomId]); // eslint-disable-line
+    // Poll every 3s for live updates (replaces PocketBase SSE).
+    const interval = setInterval(load, 3000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const copyLink = async () => {
     try {
@@ -64,7 +46,7 @@ export default function GroupView({
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      // clipboard blocked — the visible code/link is the fallback already
+      // clipboard blocked — the visible code is the fallback
     }
   };
 
@@ -116,7 +98,9 @@ export default function GroupView({
               style={{
                 ...styles.statusPill,
                 color: m.done ? COLORS.like : COLORS.muted,
-                background: m.done ? "rgba(91,214,165,.14)" : "rgba(255,255,255,.08)",
+                background: m.done
+                  ? "rgba(91,214,165,.14)"
+                  : "rgba(255,255,255,.08)",
               }}
             >
               {m.done ? "Listo" : "Swipeando…"}
@@ -130,45 +114,90 @@ export default function GroupView({
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
-    maxWidth: 480, margin: "0 auto", padding: "20px 24px 40px",
-    color: "#fff", fontFamily: "system-ui, sans-serif", textAlign: "center",
+    maxWidth: 480,
+    margin: "0 auto",
+    padding: "20px 24px 40px",
+    color: "#fff",
+    fontFamily: "system-ui, sans-serif",
+    textAlign: "center",
   },
   kicker: {
-    textTransform: "uppercase", letterSpacing: "2px", fontSize: 12,
-    color: COLORS.girl, marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: "2px",
+    fontSize: 12,
+    color: COLORS.girl,
+    marginBottom: 4,
   },
   h1: { fontFamily: "Georgia, serif", fontSize: 28, margin: "0 0 20px" },
   qrCard: {
-    background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.1)",
-    borderRadius: 20, padding: 24, display: "flex", flexDirection: "column",
-    alignItems: "center", gap: 12,
+    background: "rgba(255,255,255,.05)",
+    border: "1px solid rgba(255,255,255,.1)",
+    borderRadius: 20,
+    padding: 24,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 12,
   },
   qrImg: { borderRadius: 12, background: "#fff", padding: 10 },
   qrFallback: {
-    width: 200, height: 200, display: "flex", alignItems: "center",
-    justifyContent: "center", background: "rgba(255,255,255,.06)", borderRadius: 12,
+    width: 200,
+    height: 200,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(255,255,255,.06)",
+    borderRadius: 12,
   },
   qrFallbackText: { fontSize: 13, color: COLORS.muted, padding: 16 },
   code: {
-    fontFamily: "Georgia, serif", fontSize: 26, letterSpacing: "4px",
-    fontWeight: 700, margin: 0,
+    fontFamily: "Georgia, serif",
+    fontSize: 26,
+    letterSpacing: "4px",
+    fontWeight: 700,
+    margin: 0,
   },
   copyBtn: {
-    background: COLORS.girl, color: "#fff", border: "none", borderRadius: 999,
-    padding: "12px 22px", fontWeight: 700, cursor: "pointer", fontSize: 14,
+    background: COLORS.girl,
+    color: "#fff",
+    border: "none",
+    borderRadius: 999,
+    padding: "12px 22px",
+    fontWeight: 700,
+    cursor: "pointer",
+    fontSize: 14,
   },
   memberList: {
-    marginTop: 22, display: "flex", flexDirection: "column", gap: 8, textAlign: "left",
+    marginTop: 22,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    textAlign: "left",
   },
   memberRow: {
-    display: "flex", alignItems: "center", gap: 12,
-    background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)",
-    borderRadius: 14, padding: "10px 14px",
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    background: "rgba(255,255,255,.05)",
+    border: "1px solid rgba(255,255,255,.08)",
+    borderRadius: 14,
+    padding: "10px 14px",
   },
   avatar: {
-    width: 34, height: 34, borderRadius: "50%", display: "flex",
-    alignItems: "center", justifyContent: "center", fontWeight: 700, flexShrink: 0,
+    width: 34,
+    height: 34,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 700,
+    flexShrink: 0,
   },
   memberName: { flex: 1, fontSize: 15 },
-  statusPill: { fontSize: 12, padding: "4px 10px", borderRadius: 999, fontWeight: 600 },
+  statusPill: {
+    fontSize: 12,
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontWeight: 600,
+  },
 };

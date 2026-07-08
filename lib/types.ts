@@ -1,7 +1,6 @@
 // lib/types.ts
-// Shared record interfaces for PocketBase collections.
-// Use these with the SDK's generic methods (e.g. getFullList<NameRecord>())
-// instead of casting to `any`.
+// Shared types for the Namder domain model.
+// These were previously PocketBase record interfaces; now they're plain domain types.
 
 export interface NameRecord {
   id: string;
@@ -17,22 +16,22 @@ export interface RoomRecord {
   code: string;
   gender: "girl" | "boy" | "either";
   status: "lobby" | "swiping" | "done";
-  owner: string;
+  ownerId: string | null;
 }
 
 export interface MemberRecord {
   id: string;
-  room: string;
-  user: string;
+  roomId: string;
+  userId: string;
   display: string;
   done: boolean;
 }
 
 export interface VoteRecord {
   id: string;
-  room: string;
-  user: string;
-  name: string;
+  roomId: string;
+  userId: string;
+  nameId: string;
   liked: boolean;
 }
 

@@ -5,11 +5,8 @@
 import React, { useEffect, useState } from "react";
 import { getAuthState, AuthState } from "@/lib/authState";
 import { setGuestDisplay } from "@/lib/guestAuth";
-import {
-  upgradeGuestToRegistered,
-  logout,
-} from "@/lib/registeredAuth";
-import { getBrowserPb } from "@/lib/pb";
+import { upgradeGuestToRegistered, logout } from "@/lib/registeredAuth";
+import { apiUpdateDisplay } from "@/lib/api-client";
 import { COLORS } from "@/lib/theme";
 
 export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
@@ -36,10 +33,7 @@ export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
       if (state.kind === "guest") {
         await setGuestDisplay(display);
       } else if (state.kind === "registered") {
-        const pb = getBrowserPb();
-        await pb.collection("users").update(state.userId, {
-          display: display.trim(),
-        });
+        await apiUpdateDisplay(display.trim());
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
@@ -101,8 +95,11 @@ export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
             style={{
               ...styles.badge,
               background:
-                state.kind === "registered" ? "rgba(91,214,165,.18)" : "rgba(255,209,92,.18)",
-              color: state.kind === "registered" ? "#5BD6A5" : COLORS.girl,
+                state.kind === "registered"
+                  ? "rgba(91,214,165,.18)"
+                  : "rgba(255,209,92,.18)",
+              color:
+                state.kind === "registered" ? "#5BD6A5" : COLORS.girl,
             }}
           >
             {state.kind === "registered" ? "Registrado" : "Invitado"}
@@ -176,56 +173,116 @@ export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
-    maxWidth: 480, margin: "0 auto", padding: "20px 24px 40px",
-    color: "#fff", fontFamily: "system-ui, sans-serif",
+    maxWidth: 480,
+    margin: "0 auto",
+    padding: "20px 24px 40px",
+    color: "#fff",
+    fontFamily: "system-ui, sans-serif",
   },
   kicker: {
-    textTransform: "uppercase", letterSpacing: "2px", fontSize: 12,
-    color: COLORS.girl, marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: "2px",
+    fontSize: 12,
+    color: COLORS.girl,
+    marginBottom: 4,
   },
   h1: { fontFamily: "Georgia, serif", fontSize: 30, margin: "0 0 20px" },
   card: {
-    background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.1)",
-    borderRadius: 18, padding: 18,
+    background: "rgba(255,255,255,.05)",
+    border: "1px solid rgba(255,255,255,.1)",
+    borderRadius: 18,
+    padding: 18,
   },
-  label: { fontSize: 12, color: COLORS.muted, textTransform: "uppercase", letterSpacing: "1px" },
+  label: {
+    fontSize: 12,
+    color: COLORS.muted,
+    textTransform: "uppercase",
+    letterSpacing: "1px",
+  },
   row: { display: "flex", gap: 10, marginTop: 8 },
   input: {
-    flex: 1, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.16)",
-    borderRadius: 12, padding: "12px 14px", color: "#fff", fontSize: 15,
+    flex: 1,
+    background: "rgba(255,255,255,.08)",
+    border: "1px solid rgba(255,255,255,.16)",
+    borderRadius: 12,
+    padding: "12px 14px",
+    color: "#fff",
+    fontSize: 15,
   },
   smallCta: {
-    background: COLORS.girl, color: "#fff", border: "none", borderRadius: 12,
-    padding: "0 18px", fontWeight: 700, cursor: "pointer",
+    background: COLORS.girl,
+    color: "#fff",
+    border: "none",
+    borderRadius: 12,
+    padding: "0 18px",
+    fontWeight: 700,
+    cursor: "pointer",
   },
   statusRow: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    marginTop: 18, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,.08)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 18,
+    paddingTop: 14,
+    borderTop: "1px solid rgba(255,255,255,.08)",
   },
   statusLabel: { fontSize: 13, color: COLORS.muted },
-  badge: { fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 999 },
+  badge: {
+    fontSize: 12,
+    fontWeight: 700,
+    padding: "4px 10px",
+    borderRadius: 999,
+  },
   emailText: { fontSize: 13, color: COLORS.muted, marginTop: 6 },
   upgradeCard: {
-    marginTop: 16, background: "rgba(255,209,92,.08)", border: "1px solid rgba(255,209,92,.25)",
-    borderRadius: 18, padding: 18,
+    marginTop: 16,
+    background: "rgba(255,209,92,.08)",
+    border: "1px solid rgba(255,209,92,.25)",
+    borderRadius: 18,
+    padding: 18,
   },
   upgradeTitle: { fontWeight: 700, fontSize: 15, marginBottom: 4 },
-  upgradeText: { fontSize: 13, color: "rgba(255,255,255,.75)", lineHeight: 1.5, marginBottom: 12 },
+  upgradeText: {
+    fontSize: 13,
+    color: "rgba(255,255,255,.75)",
+    lineHeight: 1.5,
+    marginBottom: 12,
+  },
   ctaOutline: {
-    width: "100%", background: "transparent", border: `2px solid ${COLORS.girl}`,
-    color: "#fff", borderRadius: 999, padding: "12px", fontWeight: 700, cursor: "pointer",
+    width: "100%",
+    background: "transparent",
+    border: `2px solid ${COLORS.girl}`,
+    color: "#fff",
+    borderRadius: 999,
+    padding: "12px",
+    fontWeight: 700,
+    cursor: "pointer",
   },
   linkBack: {
-    display: "block", margin: "10px auto 0", background: "transparent", border: "none",
-    color: COLORS.muted, fontSize: 13, cursor: "pointer",
+    display: "block",
+    margin: "10px auto 0",
+    background: "transparent",
+    border: "none",
+    color: COLORS.muted,
+    fontSize: 13,
+    cursor: "pointer",
   },
   error: {
-    marginTop: 14, color: "#FF8FA8", fontSize: 13, background: "rgba(255,94,126,.12)",
-    padding: "10px 14px", borderRadius: 10,
+    marginTop: 14,
+    color: "#FF8FA8",
+    fontSize: 13,
+    background: "rgba(255,94,126,.12)",
+    padding: "10px 14px",
+    borderRadius: 10,
   },
   logoutBtn: {
-    marginTop: 24, background: "transparent", border: "1px solid rgba(255,255,255,.2)",
-    color: "rgba(255,255,255,.7)", borderRadius: 999, padding: "10px 18px",
-    fontSize: 13, cursor: "pointer",
+    marginTop: 24,
+    background: "transparent",
+    border: "1px solid rgba(255,255,255,.2)",
+    color: "rgba(255,255,255,.7)",
+    borderRadius: 999,
+    padding: "10px 18px",
+    fontSize: 13,
+    cursor: "pointer",
   },
 };
