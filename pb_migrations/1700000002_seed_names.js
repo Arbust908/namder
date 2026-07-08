@@ -2,6 +2,8 @@
 // Seeds the `names` collection with ~40 Argentine / Spanish names.
 // Each name carries gender, origin, and meaning so the swipe cards
 // have rich content from day one.
+//
+// TARGET: PocketBase v0.39.x — app.save(), new Record(col) + load(), no Dao global.
 
 const NAMES = [
   // — Girls —
@@ -49,24 +51,23 @@ const NAMES = [
 ];
 
 migrate(
-  (db) => {
-    const dao = new Dao(db);
-    const names = dao.findCollectionByNameOrId("names");
+  (app) => {
+    const names = app.findCollectionByNameOrId("names");
     for (const n of NAMES) {
-      const record = new Record(names, {
+      const record = new Record(names);
+      record.load({
         name: n.name,
         gender: n.gender,
         origin: n.origin,
         meaning: n.meaning,
         source: "seed",
       });
-      dao.saveRecord(record);
+      app.save(record);
     }
   },
-  (db) => {
+  (app) => {
     // down: remove all seeded names
-    const dao = new Dao(db);
-    const records = dao.findRecordsByFilter("names", "source = 'seed'");
-    for (const r of records) dao.deleteRecord(r);
+    const records = app.findRecordsByFilter("names", "source = 'seed'");
+    for (const r of records) app.delete(r);
   }
 );

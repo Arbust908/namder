@@ -3,38 +3,29 @@
 //   - guest_uuid : the durable device identity (unique)
 //   - display    : name shown on members/results
 //   - is_guest   : flag to distinguish throwaway guests from real signups
-// Also opens createRule so a device can self-register its guest record, and
-// sets identity auth on email (the synthetic guest email).
+// Also opens createRule so a device can self-register its guest record.
 //
-// VERSION NOTE: targets PocketBase 0.22.x JSVM migration API. If you bump the
-// pinned PB version, re-verify field/collection shapes against that release.
+// TARGET: PocketBase v0.39.x — fields.add() requires typed constructors (new TextField, new BoolField).
 
 migrate(
-  (db) => {
-    const dao = new Dao(db);
-    const users = dao.findCollectionByNameOrId("users");
+  (app) => {
+    const users = app.findCollectionByNameOrId("users");
 
     // --- add custom fields (guard against re-run) ---
-    // PB 0.22.x API: collection.schema.getFieldByName / addField / new SchemaField
-    if (!users.schema.getFieldByName("guest_uuid")) {
-      users.schema.addField(
-        new SchemaField({
+    if (!users.fields.getByName("guest_uuid")) {
+      users.fields.add(
+        new TextField({
           name: "guest_uuid",
-          type: "text",
           required: false,
           // unique enforced via index below
         })
       );
     }
-    if (!users.schema.getFieldByName("display")) {
-      users.schema.addField(
-        new SchemaField({ name: "display", type: "text", required: false })
-      );
+    if (!users.fields.getByName("display")) {
+      users.fields.add(new TextField({ name: "display", required: false }));
     }
-    if (!users.schema.getFieldByName("is_guest")) {
-      users.schema.addField(
-        new SchemaField({ name: "is_guest", type: "bool", required: false })
-      );
+    if (!users.fields.getByName("is_guest")) {
+      users.fields.add(new BoolField({ name: "is_guest", required: false }));
     }
 
     // unique index on guest_uuid (partial: only where set, so real users with
@@ -59,21 +50,20 @@ migrate(
     users.updateRule = "id = @request.auth.id";
     users.listRule = "id = @request.auth.id";
 
-    dao.saveCollection(users);
+    app.save(users);
   },
 
-  (db) => {
+  (app) => {
     // down: remove the added fields + index + rules
-    const dao = new Dao(db);
-    const users = dao.findCollectionByNameOrId("users");
+    const users = app.findCollectionByNameOrId("users");
     users.indexes = (users.indexes || []).filter(
       (ix) => !ix.includes("idx_users_guest_uuid")
     );
     ["guest_uuid", "display", "is_guest"].forEach((f) => {
-      const field = users.schema.getFieldByName(f);
-      if (field) users.schema.removeFieldByName(f);
+      const field = users.fields.getByName(f);
+      if (field) users.fields.removeByName(f);
     });
     users.createRule = null;
-    dao.saveCollection(users);
+    app.save(users);
   }
 );

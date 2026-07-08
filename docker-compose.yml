@@ -1,0 +1,41 @@
+services:
+  pb:
+    image: ghcr.io/muchobien/pocketbase:0.39.6
+    restart: unless-stopped
+    volumes:
+      - ./pb_hooks:/pb_hooks
+      - ./pb_migrations:/pb_migrations
+      - pb_data:/pb_data
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8090/api/health || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - namder
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PB_INTERNAL_URL=http://pb:8090
+      - NEXT_PUBLIC_PB_URL=/pb
+    depends_on:
+      pb:
+        condition: service_healthy
+    networks:
+      - namder
+
+volumes:
+  pb_data:
+
+networks:
+  namder:
+    driver: bridge
