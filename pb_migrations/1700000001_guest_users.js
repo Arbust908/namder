@@ -15,9 +15,10 @@ migrate(
     const users = dao.findCollectionByNameOrId("users");
 
     // --- add custom fields (guard against re-run) ---
-    if (!users.fields.getByName("guest_uuid")) {
-      users.fields.add(
-        new Field({
+    // PB 0.22.x API: collection.schema.getFieldByName / addField / new SchemaField
+    if (!users.schema.getFieldByName("guest_uuid")) {
+      users.schema.addField(
+        new SchemaField({
           name: "guest_uuid",
           type: "text",
           required: false,
@@ -25,14 +26,14 @@ migrate(
         })
       );
     }
-    if (!users.fields.getByName("display")) {
-      users.fields.add(
-        new Field({ name: "display", type: "text", required: false })
+    if (!users.schema.getFieldByName("display")) {
+      users.schema.addField(
+        new SchemaField({ name: "display", type: "text", required: false })
       );
     }
-    if (!users.fields.getByName("is_guest")) {
-      users.fields.add(
-        new Field({ name: "is_guest", type: "bool", required: false })
+    if (!users.schema.getFieldByName("is_guest")) {
+      users.schema.addField(
+        new SchemaField({ name: "is_guest", type: "bool", required: false })
       );
     }
 
@@ -69,8 +70,8 @@ migrate(
       (ix) => !ix.includes("idx_users_guest_uuid")
     );
     ["guest_uuid", "display", "is_guest"].forEach((f) => {
-      const field = users.fields.getByName(f);
-      if (field) users.fields.removeByName(f);
+      const field = users.schema.getFieldByName(f);
+      if (field) users.schema.removeFieldByName(f);
     });
     users.createRule = null;
     dao.saveCollection(users);
