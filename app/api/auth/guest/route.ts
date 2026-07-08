@@ -10,20 +10,44 @@ import { signToken } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
+  // 1. Parse body
+  let uuid: string;
+  let displayName: string | undefined;
   try {
-    const { uuid, displayName } = await req.json();
-    if (!uuid || typeof uuid !== "string") {
-      return NextResponse.json({ error: "Se requiere un uuid." }, { status: 400 });
-    }
+    const body = await req.json();
+    uuid = body.uuid;
+    displayName = body.displayName;
+  } catch (e: any) {
+    console.error("[guest] parse body failed", e);
+    return NextResponse.json(
+      { error: "Cuerpo inválido.", detail: e?.message },
+      { status: 400 }
+    );
+  }
 
-    const existing = await db
+  if (!uuid || typeof uuid !== "string") {
+    return NextResponse.json({ error: "Se requiere un uuid." }, { status: 400 });
+  }
+
+  // 2. Look up existing guest
+  let existing: (typeof users.$inferSelect)[];
+  try {
+    existing = await db
       .select()
       .from(users)
       .where(and(eq(users.guestUuid, uuid), eq(users.isGuest, true)))
       .limit(1);
+  } catch (e: any) {
+    console.error("[guest] db select failed", e);
+    return NextResponse.json(
+      { error: "Error consultando usuario.", detail: e?.message, code: e?.code },
+      { status: 500 }
+    );
+  }
 
-    let user: typeof users.$inferSelect;
-
+  // 3. Create or update user
+  let user: typeof users.$inferSelect;
+  try {
     if (existing.length > 0) {
       user = existing[0];
       if (displayName && displayName !== user.display) {
@@ -45,25 +69,42 @@ export async function POST(req: NextRequest) {
         .returning();
       user = created;
     }
+  } catch (e: any) {
+    console.error("[guest] db upsert failed", e);
+    if (e?.code === "23505") {
+      return NextResponse.json(
+        { error: "Conflicto, reintentá.", detail: e?.detail },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json(
+      { error: "Error guardando usuario.", detail: e?.message, code: e?.code },
+      { status: 500 }
+    );
+  }
 
-    const token = await signToken({
+  // 4. Sign token
+  let token: string;
+  try {
+    token = await signToken({
       sub: user.id,
       display: user.display,
       isGuest: true,
     });
-
-    return NextResponse.json({
-      token,
-      profile: {
-        id: user.id,
-        display: user.display,
-        isGuest: true,
-      },
-    });
   } catch (e: any) {
-    if (e?.code === "23505") {
-      return NextResponse.json({ error: "Conflicto, reintentá." }, { status: 409 });
-    }
-    return NextResponse.json({ error: "No pudimos crear la sesión." }, { status: 500 });
+    console.error("[guest] signToken failed", e);
+    return NextResponse.json(
+      { error: "Error generando token.", detail: e?.message },
+      { status: 500 }
+    );
   }
+
+  return NextResponse.json({
+    token,
+    profile: {
+      id: user.id,
+      display: user.display,
+      isGuest: true,
+    },
+  });
 }

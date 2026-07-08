@@ -21,7 +21,21 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    const { email, password } = await req.json();
+    // 1. Parse body
+    let email: string;
+    let password: string;
+    try {
+      const body = await req.json();
+      email = body.email;
+      password = body.password;
+    } catch (e: any) {
+      console.error("[upgrade] parse body failed", e);
+      return NextResponse.json(
+        { error: "Cuerpo inválido.", detail: e?.message },
+        { status: 400 }
+      );
+    }
+
     if (!email || !password || password.length < 8) {
       return NextResponse.json(
         { error: "Email válido y contraseña de al menos 8 caracteres." },
@@ -29,8 +43,19 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const passwordHash = await hashPassword(password);
+    // 2. Hash password
+    let passwordHash: string;
+    try {
+      passwordHash = await hashPassword(password);
+    } catch (e: any) {
+      console.error("[upgrade] hashPassword failed", e);
+      return NextResponse.json(
+        { error: "Error procesando contraseña.", detail: e?.message },
+        { status: 500 }
+      );
+    }
 
+    // 3. Update user
     const [updated] = await db
       .update(users)
       .set({
@@ -50,12 +75,22 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const newToken = await signToken({
-      sub: updated.id,
-      display: updated.display,
-      isGuest: false,
-      email: updated.email!,
-    });
+    // 4. Sign token
+    let newToken: string;
+    try {
+      newToken = await signToken({
+        sub: updated.id,
+        display: updated.display,
+        isGuest: false,
+        email: updated.email!,
+      });
+    } catch (e: any) {
+      console.error("[upgrade] signToken failed", e);
+      return NextResponse.json(
+        { error: "Error generando token.", detail: e?.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       token: newToken,
@@ -67,14 +102,15 @@ export async function PATCH(req: NextRequest) {
       },
     });
   } catch (e: any) {
+    console.error("[upgrade] db update failed", e);
     if (e?.code === "23505") {
       return NextResponse.json(
-        { error: "Ese email ya está en uso." },
+        { error: "Ese email ya está en uso.", detail: e?.detail },
         { status: 409 }
       );
     }
     return NextResponse.json(
-      { error: "No pudimos crear la cuenta." },
+      { error: "Error actualizando usuario.", detail: e?.message, code: e?.code },
       { status: 500 }
     );
   }
