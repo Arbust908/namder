@@ -98,13 +98,15 @@ const collections = [
 ];
 
 migrate(
-  () => {
-    // $app is the PocketBase global — the callback "app" param (txApp)
-    // doesn't expose dao() or save() in PB 0.22.x, so use the global.
-    $app.importCollections(collections);
+  (db) => {
+    const dao = new Dao(db);
+    for (const plain of collections) {
+      const collection = new Collection(plain);
+      dao.saveCollection(collection);
+    }
   },
-  () => {
-    const dao = $app.dao();
+  (db) => {
+    const dao = new Dao(db);
     for (const name of ["matches", "votes", "members", "rooms", "names"]) {
       try {
         const c = dao.findCollectionByNameOrId(name);

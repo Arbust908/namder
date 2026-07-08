@@ -49,8 +49,8 @@ const NAMES = [
 ];
 
 migrate(
-  () => {
-    const dao = $app.dao();
+  (db) => {
+    const dao = new Dao(db);
     const names = dao.findCollectionByNameOrId("names");
     for (const n of NAMES) {
       const record = new Record(names, {
@@ -63,9 +63,9 @@ migrate(
       dao.saveRecord(record);
     }
   },
-  () => {
+  (db) => {
     // down: remove all seeded names
-    const dao = $app.dao();
+    const dao = new Dao(db);
     const records = dao.findRecordsByFilter("names", "source = 'seed'");
     for (const r of records) dao.deleteRecord(r);
   }

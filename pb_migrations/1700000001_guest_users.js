@@ -10,8 +10,8 @@
 // pinned PB version, re-verify field/collection shapes against that release.
 
 migrate(
-  () => {
-    const dao = $app.dao();
+  (db) => {
+    const dao = new Dao(db);
     const users = dao.findCollectionByNameOrId("users");
 
     // --- add custom fields (guard against re-run) ---
@@ -61,9 +61,9 @@ migrate(
     dao.saveCollection(users);
   },
 
-  () => {
+  (db) => {
     // down: remove the added fields + index + rules
-    const dao = $app.dao();
+    const dao = new Dao(db);
     const users = dao.findCollectionByNameOrId("users");
     users.indexes = (users.indexes || []).filter(
       (ix) => !ix.includes("idx_users_guest_uuid")
