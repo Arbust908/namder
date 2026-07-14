@@ -6,13 +6,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { names } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { isGender } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
-  const gender = req.nextUrl.searchParams.get("gender");
+  const genderParam = req.nextUrl.searchParams.get("gender");
+  const gender = genderParam && isGender(genderParam) ? genderParam : null;
 
   const rows = gender
-    ? await db.select().from(names).where(eq(names.gender, gender))
-    : await db.select().from(names);
+    ? await db.select().from(names).where(eq(names.gender, gender)).orderBy(names.id)
+    : await db.select().from(names).orderBy(names.id);
 
   return NextResponse.json(
     rows.map((n) => ({

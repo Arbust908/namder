@@ -3,6 +3,7 @@
 // choice. The "matches" (star) computation is done server-side via SQL.
 
 import { apiCastVote, apiListNames, apiListMyVotes, type NameData } from "@/lib/api-client";
+import type { Gender } from "@/lib/types";
 
 export async function castVote(opts: {
   roomId: string;
@@ -20,7 +21,7 @@ export async function castVote(opts: {
 // this user already voted on.
 export async function loadDeck(
   roomId: string,
-  gender: "girl" | "boy" | "either"
+  gender: Gender
 ): Promise<NameData[]> {
   const names = await apiListNames(gender === "either" ? undefined : gender);
   const myVotes = await apiListMyVotes(roomId);

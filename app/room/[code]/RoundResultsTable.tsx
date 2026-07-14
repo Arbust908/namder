@@ -24,14 +24,16 @@ export default function RoundResultsTable({
   }, [roomId, roundSize]);
 
   if (!rows) {
-    return <p style={styles.loading}>Armando tu resumen…</p>;
+    return <p className="anim-pulse" style={styles.loading}>Armando tu resumen…</p>;
   }
 
   const likedCount = rows.filter((r) => r.myVote).length;
   const starCount = rows.filter((r) => r.isStar).length;
 
+  const STAGGERS = ["", "anim-d1", "anim-d2", "anim-d3", "anim-d4", "anim-d5", "anim-d6", "anim-d7"];
+
   return (
-    <div style={styles.wrap}>
+    <div className="anim-slide-up" style={styles.wrap}>
       <p style={{ ...kickerText, margin: "8px 0 6px" }}>Ronda completa</p>
       <h2 style={styles.h2}>
         Te gustaron {likedCount} de {rows.length}
@@ -44,8 +46,12 @@ export default function RoundResultsTable({
           <span style={styles.headCol}>Vos</span>
           <span style={styles.headCol}>Grupo</span>
         </div>
-        {rows.map((r) => (
-          <div key={r.nameId} style={styles.row}>
+        {rows.map((r, i) => (
+          <div
+            key={r.nameId}
+            className={`anim-row-enter ${STAGGERS[Math.min(i, 7)]}`}
+            style={styles.row}
+          >
             <div style={styles.nameCell}>
               <span
                 style={{ ...styles.dot, background: genderColor(r.gender) }}
@@ -69,7 +75,7 @@ export default function RoundResultsTable({
         ))}
       </div>
 
-      <button className="cta" style={styles.cta} onClick={onContinue}>
+      <button className="cta anim-slide-up anim-d6" style={styles.cta} onClick={onContinue}>
         Continuar
       </button>
     </div>

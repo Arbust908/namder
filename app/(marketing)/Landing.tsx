@@ -9,7 +9,7 @@
 // honest about what the product looks like rather than generic stock art.
 
 import React, { useMemo } from "react";
-import { COLORS } from "@/lib/theme";
+import { COLORS, heroGradientTight } from "@/lib/theme";
 
 export default function Landing({
   onStart,
@@ -30,7 +30,7 @@ export default function Landing({
       </nav>
 
       {/* ---------- Hero ---------- */}
-      <header style={styles.hero}>
+      <header className="anim-slide-up" style={styles.hero}>
         <p style={styles.kicker}>Para parejas (o tríos, o abuelas) eligiendo nombre</p>
         <h1 style={styles.h1}>
           Swipe hasta encontrar<br />el nombre que <em>todos</em> aman.
@@ -47,7 +47,7 @@ export default function Landing({
       </header>
 
       {/* ---------- Mock: swipe card ---------- */}
-      <section style={styles.section}>
+      <section className="anim-slide-up anim-d2" style={styles.section}>
         <div style={styles.mockRow}>
           <PhoneFrame>
             <SwipeMock />
@@ -65,7 +65,7 @@ export default function Landing({
       </section>
 
       {/* ---------- Mock: results table ---------- */}
-      <section style={styles.sectionAlt}>
+      <section className="anim-slide-up anim-d3" style={styles.sectionAlt}>
         <div style={{ ...styles.mockRow, flexDirection: "row-reverse" }}>
           <PhoneFrame>
             <ResultsMock />
@@ -83,7 +83,7 @@ export default function Landing({
       </section>
 
       {/* ---------- Mock: group + QR ---------- */}
-      <section style={styles.section}>
+      <section className="anim-slide-up anim-d4" style={styles.section}>
         <div style={styles.mockRow}>
           <PhoneFrame>
             <GroupMock />
@@ -100,7 +100,7 @@ export default function Landing({
       </section>
 
       {/* ---------- FAQ teaser / final CTA ---------- */}
-      <section style={styles.finalCta}>
+      <section className="anim-slide-up anim-d5" style={styles.finalCta}>
         <h2 style={styles.h2}>¿Le damos una vuelta?</h2>
         <button className="cta" style={styles.ctaPrimary} onClick={onStart}>
           Empezar gratis
@@ -200,7 +200,7 @@ function GroupMock() {
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
-    background: `radial-gradient(120% 60% at 50% -10%, #4A2B6B 0%, ${COLORS.bg} 45%)`,
+    background: heroGradientTight,
     color: "#fff",
     fontFamily: "system-ui, sans-serif",
     minHeight: "100vh",
@@ -210,7 +210,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
   },
   logo: { fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700 },
-  navLink: { background: "transparent", border: "none", color: COLORS.muted, fontSize: 14, cursor: "pointer" },
+  navLink: { background: "transparent", border: "none", color: COLORS.muted, fontSize: 14, cursor: "pointer", transition: "color .2s ease-out" },
 
   hero: { maxWidth: 640, margin: "0 auto", padding: "40px 24px 20px", textAlign: "center" },
   kicker: {

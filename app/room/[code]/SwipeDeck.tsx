@@ -3,9 +3,10 @@
 // SwipeDeck.tsx — Swipe card components extracted from room/[code]/page.tsx.
 // The drag interaction, card rendering, and deck display are self-contained here.
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { COLORS, genderColor } from "@/lib/theme";
 import type { NameData } from "@/lib/api-client";
+import { GENDER_LABELS } from "@/lib/types";
 
 /* ============================ SwipeDeck ============================ */
 
@@ -13,34 +14,64 @@ export function SwipeDeck({
   deck,
   index,
   onVote,
+  onSwipeDown,
 }: {
   deck: NameData[];
   index: number;
   onVote: (liked: boolean) => void;
+  onSwipeDown?: () => void;
 }) {
   const remaining = deck.length - index;
   const top = deck[index];
   const next = deck[index + 1];
+  const [exiting, setExiting] = useState<"left" | "right" | null>(null);
+
+  const handleVote = useCallback(
+    (liked: boolean) => {
+      setExiting(liked ? "right" : "left");
+      setTimeout(() => {
+        setExiting(null);
+        onVote(liked);
+      }, 250);
+    },
+    [onVote]
+  );
+
+  const handleSwipeDown = useCallback(() => {
+    if (onSwipeDown) onSwipeDown();
+  }, [onSwipeDown]);
+
+  const progressFraction = deck.length > 0 ? index / deck.length : 0;
 
   return (
-    <main style={styles.center}>
+    <main className="anim-slide-up" style={styles.center}>
       <div style={styles.progressWrap}>
         <div
           style={{
             ...styles.progressBar,
-            width: `${deck.length > 0 ? (index / deck.length) * 100 : 0}%`,
+            transform: `scaleX(${progressFraction})`,
           }}
         />
       </div>
       <p style={styles.counter}>{remaining} left</p>
 
       <div style={styles.deckArea}>
-        {next && <NameCard card={next} stacked />}
+        {next && (
+          <div className="anim-scale-in">
+            <NameCard card={next} stacked />
+          </div>
+        )}
         {top ? (
-          <SwipeCard key={top.id} card={top} onVote={onVote} />
+          <SwipeCard
+            key={top.id}
+            card={top}
+            onVote={handleVote}
+            onSwipeDown={handleSwipeDown}
+            exiting={exiting}
+          />
         ) : (
           <div style={styles.doneCard}>
-            <p>Done! Tallying…</p>
+            <p className="anim-pulse">Done! Tallying…</p>
           </div>
         )}
       </div>
@@ -49,16 +80,18 @@ export function SwipeDeck({
         <button
           className="circle"
           style={{ ...styles.circleBtn, color: COLORS.nope, borderColor: COLORS.nope }}
-          onClick={() => onVote(false)}
+          onClick={() => handleVote(false)}
           aria-label="Nope"
+          disabled={!!exiting}
         >
           ✕
         </button>
         <button
           className="circle"
           style={{ ...styles.circleBtn, color: COLORS.like, borderColor: COLORS.like }}
-          onClick={() => onVote(true)}
+          onClick={() => handleVote(true)}
           aria-label="Like"
+          disabled={!!exiting}
         >
           ♥
         </button>
@@ -86,7 +119,7 @@ function NameCardInner({ card }: { card: NameData }) {
       <div style={{ ...styles.monogram, background: c }}>{card.name[0]}</div>
       <h2 style={styles.cardName}>{card.name}</h2>
       <span style={{ ...styles.genderPill, background: c }}>
-        {card.gender === "girl" ? "Niña" : card.gender === "boy" ? "Niño" : "Either"}
+        {GENDER_LABELS[card.gender]}
       </span>
       <p style={styles.meaning}>"{card.meaning}"</p>
       <p style={styles.origin}>{card.origin} origin</p>
@@ -99,14 +132,19 @@ function NameCardInner({ card }: { card: NameData }) {
 function SwipeCard({
   card,
   onVote,
+  onSwipeDown,
+  exiting,
 }: {
   card: NameData;
   onVote: (liked: boolean) => void;
+  onSwipeDown?: () => void;
+  exiting: "left" | "right" | null;
 }) {
   const [drag, setDrag] = useState({ x: 0, y: 0, active: false });
   const start = useRef<{ x: number; y: number } | null>(null);
 
   const onDown = (x: number, y: number) => {
+    if (exiting) return;
     start.current = { x, y };
     setDrag((d) => ({ ...d, active: true }));
   };
@@ -119,23 +157,41 @@ function SwipeCard({
     const t = 110;
     if (drag.x > t) onVote(true);
     else if (drag.x < -t) onVote(false);
+    else if (drag.y > t && onSwipeDown) onSwipeDown();
     else setDrag({ x: 0, y: 0, active: false });
     start.current = null;
   };
 
-  const rot = drag.x / 18;
+  const rot = exiting ? 0 : drag.x / 18;
+
+  // Exit transform: slide card off-screen in the vote direction
+  const exitX = exiting === "right" ? 280 : exiting === "left" ? -280 : 0;
+  const exitRot = exiting === "right" ? 12 : exiting === "left" ? -12 : 0;
+  const exitOpacity = exiting ? 0 : 1;
+
+  const tx = exiting ? exitX : drag.x;
+  const ty = exiting ? 0 : drag.y;
+  const tr = exiting ? exitRot : rot;
+
   const likeOp = Math.max(0, Math.min(1, drag.x / 110));
   const nopeOp = Math.max(0, Math.min(1, -drag.x / 110));
+  const eitherOp = onSwipeDown ? Math.max(0, Math.min(1, drag.y / 110)) : 0;
+
+  const showLikeStamp = likeOp > 0.7;
+  const showNopeStamp = nopeOp > 0.7;
 
   return (
     <div
       style={{
         ...styles.swipeCard,
-        transform: `translate(${drag.x}px, ${drag.y}px) rotate(${rot}deg)`,
-        transition: drag.active
-          ? "none"
-          : "transform .35s cubic-bezier(.2,.8,.2,1)",
-        cursor: drag.active ? "grabbing" : "grab",
+        transform: `translate(${tx}px, ${ty}px) rotate(${tr}deg)`,
+        opacity: exitOpacity,
+        transition: exiting
+          ? "transform .25s ease-in, opacity .2s ease-out"
+          : drag.active
+            ? "none"
+            : "transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease-out",
+        cursor: exiting ? "default" : drag.active ? "grabbing" : "grab",
       }}
       onMouseDown={(e) => onDown(e.clientX, e.clientY)}
       onMouseMove={(e) => drag.active && onMove(e.clientX, e.clientY)}
@@ -149,8 +205,39 @@ function SwipeCard({
       }
       onTouchEnd={onUp}
     >
-      <span style={{ ...styles.stampLike, opacity: likeOp }}>LIKE</span>
-      <span style={{ ...styles.stampNope, opacity: nopeOp }}>NOPE</span>
+      <span
+        className={showLikeStamp ? "anim-pop" : ""}
+        style={{
+          ...styles.stampLike,
+          opacity: likeOp,
+          transform: `rotate(-16deg) scale(${likeOp > 0 ? 1 : 0.8})`,
+          transition: "opacity .15s ease-out, transform .15s ease-out",
+        }}
+      >
+        LIKE
+      </span>
+      <span
+        className={showNopeStamp ? "anim-pop" : ""}
+        style={{
+          ...styles.stampNope,
+          opacity: nopeOp,
+          transform: `rotate(16deg) scale(${nopeOp > 0 ? 1 : 0.8})`,
+          transition: "opacity .15s ease-out, transform .15s ease-out",
+        }}
+      >
+        NOPE
+      </span>
+      {onSwipeDown && (
+        <span
+          style={{
+            ...styles.stampEither,
+            opacity: eitherOp,
+            transition: "opacity .15s ease-out",
+          }}
+        >
+          EITHER
+        </span>
+      )}
       <NameCardInner card={card} />
     </div>
   );
@@ -177,7 +264,13 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     marginTop: 4,
   },
-  progressBar: { height: "100%", background: COLORS.girl, transition: "width .3s ease" },
+  progressBar: {
+    width: "100%",
+    height: "100%",
+    background: COLORS.girl,
+    transformOrigin: "left center",
+    transition: "transform .4s cubic-bezier(.25,.46,.45,.94)",
+  },
   counter: {
     fontFamily: "system-ui, sans-serif",
     fontSize: 13,
@@ -272,6 +365,20 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "system-ui, sans-serif",
     fontWeight: 800,
     fontSize: 30,
+    padding: "2px 14px",
+    borderRadius: 10,
+    letterSpacing: "2px",
+  },
+  stampEither: {
+    position: "absolute",
+    bottom: 26,
+    left: "50%",
+    transform: "translateX(-50%)",
+    border: `4px solid ${COLORS.either}`,
+    color: COLORS.either,
+    fontFamily: "system-ui, sans-serif",
+    fontWeight: 800,
+    fontSize: 26,
     padding: "2px 14px",
     borderRadius: 10,
     letterSpacing: "2px",

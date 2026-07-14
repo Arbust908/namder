@@ -8,6 +8,20 @@
       "when": 1783545217007,
       "tag": "0000_loving_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783814082768,
+      "tag": "0001_adorable_centennial",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783815399611,
+      "tag": "0002_free_raider",
+      "breakpoints": true
     }
   ]
 }

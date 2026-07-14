@@ -1,31 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Landing from "./(marketing)/Landing";
-import { ensureGuest } from "@/lib/guestAuth";
-import { apiCreateRoom } from "@/lib/api-client";
 
+// Landing is the cold-visitor front door. "Empezar gratis" no longer creates
+// a guest+room inline — it sends the visitor to the Welcome gate first
+// (collect a name / register), then on to Profile, where the room is created.
 export default function Home() {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-
-  const handleStart = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await ensureGuest();
-
-      const room = await apiCreateRoom({ gender: "either" });
-      if (room.code) {
-        router.push(`/room/${room.code}`);
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleAbout = () => router.push("/about");
-
-  return <Landing onStart={handleStart} onAbout={handleAbout} />;
+  return (
+    <Landing
+      onStart={() => router.push("/welcome")}
+      onAbout={() => router.push("/about")}
+    />
+  );
 }

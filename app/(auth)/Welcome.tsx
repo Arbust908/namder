@@ -64,122 +64,126 @@ export default function Welcome({ onReady }: Props) {
     }
   };
 
+  // Layout (full-bleed dark bg, column widths, the desktop two-column
+  // split) lives in globals.css as mobile-first media queries — see
+  // .welcome-wrap / .welcome-grid / .welcome-left / .welcome-right.
+  // Inline styles here only carry colors, cards, and inputs.
   return (
-    <main style={styles.wrap}>
-      <span style={styles.logo}>
-        Nam<span style={{ color: COLORS.girl }}>d</span>er
-      </span>
+    <main className="welcome-wrap" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div className="welcome-grid">
+        <div className="welcome-left">
+          <span style={styles.logo}>
+            Nam<span style={{ color: COLORS.girl }}>d</span>er
+          </span>
 
-      {mode === "pick" && (
-        <>
-          <h1 style={styles.h1}>¿Cómo querés empezar?</h1>
-          <p style={styles.lede}>
-            Podés probar ya mismo solo con un nombre, o crear una cuenta para
-            volver a entrar desde otro dispositivo.
-          </p>
+          {mode === "pick" ? (
+            <>
+              <h1 style={styles.h1}>¿Cómo querés empezar?</h1>
+              <p style={styles.lede}>
+                Podés probar ya mismo solo con un nombre, o crear una cuenta
+                para volver a entrar desde otro dispositivo.
+              </p>
+            </>
+          ) : (
+            <h1 style={styles.h1}>Creá tu cuenta</h1>
+          )}
+        </div>
 
-          <div style={styles.card}>
-            <p style={styles.cardLabel}>Rápido, sin vueltas</p>
-            <input
-              style={styles.input}
-              placeholder="Tu nombre (ej. Fran)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={24}
-            />
-            <button
-              className="cta"
-              style={styles.ctaPrimary}
-              onClick={continueAsGuest}
-              disabled={busy}
-            >
-              {busy ? "Un momento…" : "Continuar como invitado"}
-            </button>
+        <div className="welcome-right">
+          <div key={mode} className="anim-slide-up">
+          {mode === "pick" && (
+            <>
+              <div style={styles.card}>
+                <p style={styles.cardLabel}>Rápido, sin vueltas</p>
+                <input
+                  style={styles.input}
+                  placeholder="Tu nombre (ej. Fran)"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={24}
+                />
+                <button
+                  className="cta"
+                  style={styles.ctaPrimary}
+                  onClick={continueAsGuest}
+                  disabled={busy}
+                >
+                  {busy ? "Un momento…" : "Continuar como invitado"}
+                </button>
+              </div>
+
+              <div style={styles.divider}>
+                <span style={styles.dividerLine} />
+                <span style={styles.dividerText}>o</span>
+                <span style={styles.dividerLine} />
+              </div>
+
+              <button
+                className="ghost-cta"
+                style={styles.ctaSecondary}
+                onClick={() => setMode("register")}
+              >
+                Regístrate
+              </button>
+              <p style={styles.hint}>
+                Con cuenta podés entrar desde el celu de otra persona y seguir
+                donde quedaste.
+              </p>
+            </>
+          )}
+
+          {mode === "register" && (
+            <>
+              <div style={styles.card}>
+                <input
+                  style={styles.input}
+                  placeholder="Tu nombre"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={24}
+                />
+                <input
+                  style={styles.input}
+                  placeholder="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <input
+                  style={styles.input}
+                  placeholder="Contraseña (mín. 8 caracteres)"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  className="cta"
+                  style={styles.ctaPrimary}
+                  onClick={submitRegister}
+                  disabled={busy}
+                >
+                  {busy ? "Creando cuenta…" : "Crear cuenta"}
+                </button>
+              </div>
+              <button
+                className="ghost-cta"
+                style={styles.linkBack}
+                onClick={() => setMode("pick")}
+              >
+                ← Volver
+              </button>
+            </>
+          )}
+
           </div>
-
-          <div style={styles.divider}>
-            <span style={styles.dividerLine} />
-            <span style={styles.dividerText}>o</span>
-            <span style={styles.dividerLine} />
-          </div>
-
-          <button
-            className="ghost-cta"
-            style={styles.ctaSecondary}
-            onClick={() => setMode("register")}
-          >
-            Regístrate
-          </button>
-          <p style={styles.hint}>
-            Con cuenta podés entrar desde el celu de otra persona y seguir
-            donde quedaste.
-          </p>
-        </>
-      )}
-
-      {mode === "register" && (
-        <>
-          <h1 style={styles.h1}>Creá tu cuenta</h1>
-          <div style={styles.card}>
-            <input
-              style={styles.input}
-              placeholder="Tu nombre"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={24}
-            />
-            <input
-              style={styles.input}
-              placeholder="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <input
-              style={styles.input}
-              placeholder="Contraseña (mín. 8 caracteres)"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <button
-              className="cta"
-              style={styles.ctaPrimary}
-              onClick={submitRegister}
-              disabled={busy}
-            >
-              {busy ? "Creando cuenta…" : "Crear cuenta"}
-            </button>
-          </div>
-          <button
-            className="ghost-cta"
-            style={styles.linkBack}
-            onClick={() => setMode("pick")}
-          >
-            ← Volver
-          </button>
-        </>
-      )}
-
-      {error && <p style={styles.error}>{error}</p>}
+          {error && <p className="anim-slide-down" style={styles.error}>{error}</p>}
+        </div>
+      </div>
     </main>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: {
-    minHeight: "100vh",
-    background: "radial-gradient(120% 80% at 50% -10%, #4A2B6B 0%, #2A1B3D 55%)",
-    color: "#fff",
-    fontFamily: "system-ui, sans-serif",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "28px 24px 40px",
-    textAlign: "center",
-    maxWidth: 480,
-    margin: "0 auto",
-  },
   logo: {
     fontFamily: "Georgia, serif",
     fontSize: 26,

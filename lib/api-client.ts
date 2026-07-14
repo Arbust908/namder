@@ -1,6 +1,8 @@
 // lib/api-client.ts — FIX: guest auth now passes uuid
 // Browser-side fetch wrapper — replaces PocketBase SDK for client components.
 
+import type { AssignableGender, Gender, NameRecord } from "@/lib/types";
+
 const TOKEN_KEY = "namder.token";
 
 // ── token helpers ──────────────────────────────────────────────────
@@ -118,7 +120,7 @@ export async function apiUpdateDisplay(display: string): Promise<UserProfile> {
 export type RoomData = {
   id: string;
   code: string;
-  gender: "girl" | "boy" | "either";
+  gender: Gender;
   status: "lobby" | "swiping" | "done";
   ownerId: string | null;
 };
@@ -136,6 +138,19 @@ export async function apiCreateRoom(opts: {
   gender: string;
 }): Promise<RoomData> {
   return api("/api/rooms", { method: "POST", body: opts });
+}
+
+export type MyRoomData = RoomData & {
+  memberId: string;
+  done: boolean;
+  memberCount: number;
+  voteCount: number;
+  createdAt: string;
+};
+
+/** List rooms the authenticated user is a member of. */
+export async function apiListMyRooms(): Promise<MyRoomData[]> {
+  return api("/api/rooms?mine=true");
 }
 
 // ── members endpoints ──────────────────────────────────────────────
@@ -198,13 +213,7 @@ export async function apiListMyVotes(
 
 // ── names endpoints ────────────────────────────────────────────────
 
-export type NameData = {
-  id: string;
-  name: string;
-  gender: "girl" | "boy";
-  origin: string;
-  meaning: string;
-};
+export type NameData = NameRecord;
 
 export async function apiListNames(gender?: string): Promise<NameData[]> {
   const qs =
@@ -212,12 +221,19 @@ export async function apiListNames(gender?: string): Promise<NameData[]> {
   return api(`/api/names${qs}`);
 }
 
+export async function apiUpdateNameGender(
+  id: string,
+  gender: AssignableGender
+): Promise<NameData> {
+  return api(`/api/names/${id}`, { method: "PATCH", body: { gender } });
+}
+
 // ── results endpoint ───────────────────────────────────────────────
 
 export type RoundRowData = {
   nameId: string;
   name: string;
-  gender: "girl" | "boy";
+  gender: Gender;
   meaning: string;
   myVote: boolean;
   likeCount: number;

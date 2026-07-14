@@ -7,8 +7,11 @@ import {
   uuid,
   text,
   boolean,
+  integer,
+  index,
   timestamp,
   uniqueIndex,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 
 // ── users ──────────────────────────────────────────────────────────
@@ -31,23 +34,47 @@ export const users = pgTable(
 
 // ── names ──────────────────────────────────────────────────────────
 // The shared deck of names (global, not per-room).
-export const names = pgTable("names", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  gender: text("gender").notNull(), // 'girl' | 'boy'
-  origin: text("origin"),
-  meaning: text("meaning"),
-  source: text("source"),
-});
+const genderNames = ["girl", "boy", "either"] as const;
+const nameGender = pgEnum("name_gender", [...genderNames, "unknown"]);
+export const names = pgTable(
+  "names",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull().unique(),
+    gender: nameGender("gender").notNull(), // 'girl' | 'boy' | 'either' | 'unknown'
+    origin: text("origin"),
+    meaning: text("meaning"),
+    source: text("source"),
+  },
+);
+
+// ── name_rankings ───────────────────────────────────────────────────
+// Per-year popularity counts and ranks imported from external CSVs.
+export const nameRankings = pgTable(
+  "name_rankings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    year: integer("year").notNull(),
+    count: integer("count").notNull(),
+    rank: integer("rank").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_name_rankings_year_name").on(t.year, t.name),
+    index("idx_name_rankings_year_rank").on(t.year, t.rank),
+  ],
+);
 
 // ── rooms ──────────────────────────────────────────────────────────
 // A swipe room / group.
+const roomGender = pgEnum("room_gender", genderNames);
 export const rooms = pgTable(
   "rooms",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     code: text("code").notNull().unique(),
-    gender: text("gender").notNull(), // 'girl' | 'boy' | 'either'
+    gender: roomGender("gender").notNull(), // 'girl' | 'boy' | 'either'
     status: text("status").notNull().default("lobby"), // 'lobby' | 'swiping' | 'done'
     ownerId: uuid("owner_id").references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

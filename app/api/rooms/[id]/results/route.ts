@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { votes, members, names } from "@/lib/schema";
 import { getAuthPayload, UNAUTHORIZED } from "@/lib/auth";
+import type { Gender } from "@/lib/types";
 import { eq, and, sql } from "drizzle-orm";
 
 export async function GET(
@@ -71,7 +72,7 @@ export async function GET(
     return {
       nameId: v.nameId,
       name: v.nameName,
-      gender: v.nameGender as "girl" | "boy",
+      gender: v.nameGender as Gender,
       meaning: v.nameMeaning || "",
       myVote: v.liked,
       likeCount,

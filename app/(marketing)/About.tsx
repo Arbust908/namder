@@ -2,8 +2,8 @@
 // "Nosotros" / About page. Bio + site link are placeholders — search for
 // [EDITAR: ...] markers and replace with the real copy before shipping.
 
-import React, { useState } from "react";
-import { COLORS } from "@/lib/theme";
+import React, { useState, useRef, useEffect } from "react";
+import { COLORS, heroGradientTight } from "@/lib/theme";
 
 const FAQS: Array<{ q: string; a: string }> = [
   {
@@ -45,7 +45,7 @@ export default function About({ onBack }: { onBack: () => void }) {
       </nav>
 
       {/* ---------- Bio ---------- */}
-      <section style={styles.bioSection}>
+      <section className="anim-slide-up" style={styles.bioSection}>
         <div style={styles.avatarPlaceholder}>[EDITAR: FOTO]</div>
         <h1 style={styles.h1}>[EDITAR: Nombre y Apellido]</h1>
         <p style={styles.bioText}>
@@ -64,7 +64,7 @@ export default function About({ onBack }: { onBack: () => void }) {
       </section>
 
       {/* ---------- FAQ ---------- */}
-      <section style={styles.faqSection}>
+      <section className="anim-slide-up anim-d3" style={styles.faqSection}>
         <p style={styles.kicker}>Preguntas frecuentes</p>
         <h2 style={styles.h2}>Lo que la gente suele preguntar</h2>
         <div style={styles.faqList}>
@@ -83,6 +83,15 @@ export default function About({ onBack }: { onBack: () => void }) {
 
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
+  const contentRef = useRef<HTMLParagraphElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, [a]);
+
   return (
     <div style={styles.faqItem}>
       <button
@@ -91,16 +100,33 @@ function FaqItem({ q, a }: { q: string; a: string }) {
         aria-expanded={open}
       >
         <span>{q}</span>
-        <span style={styles.faqChevron}>{open ? "−" : "+"}</span>
+        <span
+          style={{
+            ...styles.faqChevron,
+            transform: open ? "rotate(45deg)" : "rotate(0deg)",
+            transition: "transform .25s ease-out",
+          }}
+        >
+          +
+        </span>
       </button>
-      {open && <p style={styles.faqAnswer}>{a}</p>}
+      <div
+        style={{
+          overflow: "hidden",
+          maxHeight: open ? contentHeight || 500 : 0,
+          opacity: open ? 1 : 0,
+          transition: "max-height .3s ease-out, opacity .25s ease-out",
+        }}
+      >
+        <p ref={contentRef} style={styles.faqAnswer}>{a}</p>
+      </div>
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
-    background: `radial-gradient(120% 60% at 50% -10%, #4A2B6B 0%, ${COLORS.bg} 45%)`,
+    background: heroGradientTight,
     color: "#fff",
     fontFamily: "system-ui, sans-serif",
     minHeight: "100vh",
@@ -113,6 +139,7 @@ const styles: Record<string, React.CSSProperties> = {
   navLink: {
     background: "transparent", border: "none", color: COLORS.muted,
     fontSize: 14, cursor: "pointer",
+    transition: "color .2s ease-out",
   },
 
   bioSection: {

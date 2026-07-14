@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { castVote } from "@/lib/vote";
 import { markDone } from "@/lib/groups";
-import { COLORS } from "@/lib/theme";
+import { COLORS, heroGradient } from "@/lib/theme";
 import { useRoomBoot } from "@/hooks/useRoomBoot";
 import { SwipeDeck } from "./SwipeDeck";
 import GroupView from "./GroupView";
@@ -21,13 +22,20 @@ export default function RoomPage() {
   const [screen, setScreen] = useState<Screen>("loading");
   const [index, setIndex] = useState(0);
 
-  const { roomId, memberId, roomCode, deck, displayName, error, loading } =
+  const { roomId, memberId, roomCode, deck, displayName, error, loading, hasVotes: bootHasVotes } =
     useRoomBoot(code);
 
-  // Transition from loading → swiping once boot completes.
+  const [votedThisSession, setVotedThisSession] = useState(false);
+
+  // hasVotes is true if boot found historical votes OR we've voted this session.
+  const hasVotes = bootHasVotes || votedThisSession;
+
+  // Transition from loading → group (lobby) once boot completes. The group
+  // view is the lobby: invite people, then tap "start swiping" to enter the
+  // deck. Swiping is never the landing screen for a fresh entry.
   useEffect(() => {
     if (!loading && !error && screen === "loading") {
-      setScreen("swiping");
+      setScreen("group");
     }
   }, [loading, error, screen]);
 
@@ -40,6 +48,7 @@ export default function RoomPage() {
       } catch {
         // keep going — don't block the swipe
       }
+      setVotedThisSession(true);
       const next = index + 1;
       setIndex(next);
 
@@ -55,7 +64,7 @@ export default function RoomPage() {
 
   if (error) {
     return (
-      <div style={styles.app}>
+      <div className="anim-fade-in" style={styles.app}>
         <main style={styles.center}>
           <p style={styles.errorText}>{error}</p>
           <button className="cta" style={styles.cta} onClick={() => router.push("/")}>
@@ -73,12 +82,13 @@ export default function RoomPage() {
         displayName={displayName}
         index={index}
         deckLen={deck.length}
-        onGroup={() => setScreen("group")}
+        hasVotes={hasVotes}
+        onResults={() => setScreen("roundResults")}
       />
 
       {screen === "loading" && (
-        <main style={styles.center}>
-          <p style={styles.loadingText}>Entrando a la sala…</p>
+        <main className="anim-fade-in" style={styles.center}>
+          <p className="anim-pulse" style={styles.loadingText}>Entrando a la sala…</p>
         </main>
       )}
 
@@ -99,6 +109,9 @@ export default function RoomPage() {
           roomId={roomId}
           roomCode={roomCode}
           joinUrlBase={typeof window !== "undefined" ? `${window.location.origin}/room` : ""}
+          currentMemberId={memberId}
+          canStart={index < deck.length}
+          onStartSwiping={() => setScreen("swiping")}
         />
       )}
     </div>
@@ -112,33 +125,49 @@ function Header({
   displayName,
   index,
   deckLen,
-  onGroup,
+  hasVotes,
+  onResults,
 }: {
   screen: Screen;
   displayName: string;
   index: number;
   deckLen: number;
-  onGroup: () => void;
+  hasVotes: boolean;
+  onResults: () => void;
 }) {
   return (
-    <header style={styles.header}>
-      <span style={styles.logo}>
+    <header className="anim-slide-down" style={styles.header}>
+      <Link href="/" style={styles.logo} aria-label="Ir al inicio">
         Nam<span style={{ color: COLORS.girl }}>d</span>er
-      </span>
+      </Link>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {screen === "swiping" && (
           <span style={styles.turnTag}>
             {displayName} · {Math.min(index + 1, deckLen)}/{deckLen}
           </span>
         )}
-        <button
+        {screen !== "roundResults" && (
+          <button
+            className="ghost"
+            style={{
+              ...styles.resultsBtn,
+              opacity: hasVotes ? 1 : 0.4,
+            }}
+            onClick={onResults}
+            disabled={!hasVotes}
+            aria-label="Ver resultados"
+          >
+            Resultados
+          </button>
+        )}
+        <Link
+          href="/profile"
           className="ghost"
           style={styles.groupBtn}
-          onClick={onGroup}
-          aria-label="Ver grupo"
+          aria-label="Ver mi perfil"
         >
-          👥
-        </button>
+          👤
+        </Link>
       </div>
     </header>
   );
@@ -149,7 +178,7 @@ function Header({
 const styles: Record<string, React.CSSProperties> = {
   app: {
     minHeight: "100vh",
-    background: `radial-gradient(120% 80% at 50% -10%, #4A2B6B 0%, ${COLORS.bg} 55%)`,
+    background: heroGradient,
     color: "#fff",
     fontFamily: "'Georgia', 'Times New Roman', serif",
     display: "flex",
@@ -164,7 +193,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "space-between",
   },
-  logo: { fontSize: 26, fontWeight: 700, letterSpacing: "-.5px" },
+  logo: {
+    fontSize: 26,
+    fontWeight: 700,
+    letterSpacing: "-.5px",
+    color: "#fff",
+    textDecoration: "none",
+  },
   turnTag: {
     fontFamily: "system-ui, sans-serif",
     fontSize: 13,
@@ -183,6 +218,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    color: "#fff",
+    textDecoration: "none",
   },
   center: {
     width: "100%",
@@ -208,6 +245,17 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "14px 18px",
     borderRadius: 12,
     marginBottom: 16,
+  },
+  resultsBtn: {
+    fontSize: 13,
+    fontWeight: 600,
+    fontFamily: "system-ui, sans-serif",
+    color: "#fff",
+    background: "rgba(255,255,255,.08)",
+    border: "1px solid rgba(255,255,255,.15)",
+    borderRadius: 999,
+    padding: "6px 14px",
+    cursor: "pointer",
   },
   cta: {
     background: COLORS.girl,

@@ -1,15 +1,34 @@
 // app/profile/Profile.tsx
 // "Mi perfil" — view/edit display name, see guest vs registered status, and
 // (only for guests) a path to upgrade without losing history.
+// Also shows a grid of the user's groups when they have any.
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getAuthState, AuthState } from "@/lib/authState";
 import { setGuestDisplay } from "@/lib/guestAuth";
 import { upgradeGuestToRegistered, logout } from "@/lib/registeredAuth";
-import { apiUpdateDisplay } from "@/lib/api-client";
+import { apiUpdateDisplay, type MyRoomData } from "@/lib/api-client";
 import { COLORS } from "@/lib/theme";
 
-export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
+const STATUS_LABEL: Record<string, string> = {
+  lobby: "En curso",
+  swiping: "Deslizando",
+  done: "Terminado",
+};
+
+export default function Profile({
+  onLoggedOut,
+  onStartGroup,
+  startingGroup = false,
+  rooms = [],
+}: {
+  onLoggedOut: () => void;
+  onStartGroup: () => void;
+  startingGroup?: boolean;
+  rooms?: MyRoomData[];
+}) {
+  const router = useRouter();
   const [state, setState] = useState<AuthState>({ kind: "anonymous" });
   const [display, setDisplay] = useState("");
   const [savingName, setSavingName] = useState(false);
@@ -65,8 +84,13 @@ export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
     onLoggedOut();
   };
 
+  // Layout + dark background live in globals.css (.profile-wrap /
+  // .profile-inner) as mobile-first media queries. Profile's wrap previously
+  // had no background, so the white <body> showed through — that was the
+  // "light mode" bug; .profile-wrap now carries the dark gradient.
   return (
-    <main style={styles.wrap}>
+    <main className="profile-wrap" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div className="profile-inner anim-fade-in">
       <p style={styles.kicker}>Mi perfil</p>
       <h1 style={styles.h1}>{display || "Vos"}</h1>
 
@@ -81,7 +105,11 @@ export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
           />
           <button
             className="cta"
-            style={styles.smallCta}
+            style={{
+              ...styles.smallCta,
+              transform: saved ? "scale(1.08)" : "scale(1)",
+              transition: "transform .2s cubic-bezier(.25,.46,.45,.94), filter .2s ease-out",
+            }}
             onClick={saveDisplay}
             disabled={savingName}
           >
@@ -109,6 +137,62 @@ export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
           <p style={styles.emailText}>{state.email}</p>
         )}
       </div>
+
+      {/* Groups grid — when the user already has groups, show them as cards
+          with a "new group" card at the end. Otherwise just the CTA. */}
+      {rooms.length > 0 ? (
+        <div style={styles.groupsGrid}>
+          {rooms.map((r, i) => {
+            const d = Math.min(i, 7);
+            return (
+              <button
+                key={r.id}
+                className={`opt anim-scale-in anim-d${d}`}
+                style={{
+                  ...styles.groupCard,
+                  transition: "transform .25s cubic-bezier(.25,.46,.45,.94), box-shadow .25s ease-out",
+                }}
+                onClick={() => router.push(`/room/${r.code}`)}
+              >
+                <p style={styles.groupCode}>{r.code}</p>
+                <p style={styles.groupMeta}>
+                  {r.memberCount} {r.memberCount === 1 ? "persona" : "personas"}
+                  {" · "}
+                  {STATUS_LABEL[r.status] || r.status}
+                </p>
+                <p style={styles.groupVotes}>
+                  {r.voteCount > 0
+                    ? `${r.voteCount} votos`
+                    : "Sin votos aún"}
+                </p>
+              </button>
+            );
+          })}
+          <button
+            className="opt anim-scale-in anim-d6"
+            style={{
+              ...styles.newGroupCard,
+              transition: "transform .25s cubic-bezier(.25,.46,.45,.94), border-color .25s ease-out",
+            }}
+            onClick={onStartGroup}
+            disabled={startingGroup}
+          >
+            <span style={styles.newGroupPlus}>+</span>
+            <span style={styles.newGroupLabel}>
+              {startingGroup ? "Creando…" : "Nuevo grupo"}
+            </span>
+          </button>
+        </div>
+      ) : (
+        <button
+          className="cta"
+          style={styles.startGroupBtn}
+          onClick={onStartGroup}
+          disabled={startingGroup}
+        >
+          {startingGroup ? "Creando grupo…" : "Iniciar grupo nuevo"}
+        </button>
+      )}
 
       {state.kind === "guest" && !showUpgrade && (
         <div style={styles.upgradeCard}>
@@ -167,18 +251,12 @@ export default function Profile({ onLoggedOut }: { onLoggedOut: () => void }) {
           Cerrar sesión
         </button>
       )}
+      </div>
     </main>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  wrap: {
-    maxWidth: 480,
-    margin: "0 auto",
-    padding: "20px 24px 40px",
-    color: "#fff",
-    fontFamily: "system-ui, sans-serif",
-  },
   kicker: {
     textTransform: "uppercase",
     letterSpacing: "2px",
@@ -284,5 +362,77 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "10px 18px",
     fontSize: 13,
     cursor: "pointer",
+  },
+  startGroupBtn: {
+    marginTop: 18,
+    width: "100%",
+    background: COLORS.girl,
+    color: "#fff",
+    border: "none",
+    borderRadius: 999,
+    padding: "15px",
+    fontSize: 16,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  groupsGrid: {
+    marginTop: 22,
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+    gap: 12,
+  },
+  groupCard: {
+    background: "rgba(255,255,255,.05)",
+    border: "1px solid rgba(255,255,255,.1)",
+    borderRadius: 16,
+    padding: 16,
+    cursor: "pointer",
+    textAlign: "left" as const,
+    color: "#fff",
+    fontFamily: "system-ui, sans-serif",
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 6,
+  },
+  groupCode: {
+    fontSize: 20,
+    fontWeight: 700,
+    letterSpacing: "3px",
+    fontFamily: "Georgia, serif",
+    margin: 0,
+  },
+  groupMeta: {
+    fontSize: 12,
+    color: COLORS.muted,
+    margin: 0,
+  },
+  groupVotes: {
+    fontSize: 11,
+    color: "rgba(255,255,255,.5)",
+    margin: 0,
+  },
+  newGroupCard: {
+    background: "rgba(255,255,255,.03)",
+    border: "2px dashed rgba(255,255,255,.15)",
+    borderRadius: 16,
+    padding: 16,
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    color: COLORS.girl,
+    fontFamily: "system-ui, sans-serif",
+    minHeight: 100,
+  },
+  newGroupPlus: {
+    fontSize: 28,
+    fontWeight: 300,
+    lineHeight: 1,
+  },
+  newGroupLabel: {
+    fontSize: 13,
+    fontWeight: 600,
   },
 };
